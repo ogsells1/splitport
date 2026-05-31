@@ -62,6 +62,13 @@ export default function Dashboard() {
           <DepositModal />
           <DistributeButton walletAddress={walletAddress} />
         </div>
+
+        <a
+          href="/history"
+          className="block w-full text-center text-sm text-gray-400 hover:text-gray-600 transition-colors py-2 border border-gray-200 rounded-xl bg-white"
+        >
+          View Transaction History →
+        </a>
       </main>
     </div>
   );
