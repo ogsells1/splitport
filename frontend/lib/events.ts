@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { createPublicClient, http, parseAbiItem, formatUnits } from "viem";
 
-// Arc Testnet chain config
 const arcTestnet = {
   id: 5042002,
   name: "Arc Testnet",
@@ -10,6 +9,7 @@ const arcTestnet = {
 } as const;
 
 const VAULT_ADDRESS = "0x2DB3dbDA6C5F5CfF3234CDBadD049D90412c1774" as const;
+const CHUNK_SIZE = 9000n; // Arc Testnet limit is 10,000 — stay safe
 
 export type TxType = "deposit" | "payment" | "distribution";
 
@@ -18,14 +18,10 @@ export interface VaultEvent {
   txHash: string;
   blockNumber: bigint;
   timestamp?: number;
-  // deposit
   from?: string;
-  // payment
   wallet?: string;
   role?: string;
-  // distribution
   contributorCount?: number;
-  // shared
   amount: bigint;
   amountFormatted: string;
 }
@@ -45,6 +41,33 @@ const DISTRIBUTION_ABI = parseAbiItem(
   "event RevenueDistributed(uint256 totalAmount, uint256 contributorCount, uint256 timestamp)"
 );
 
+async function getLogsChunked(
+  event: any,
+  fromBlock: bigint,
+  toBlock: bigint
+): Promise<any[]> {
+  const results: any[] = [];
+  let start = fromBlock;
+
+  while (start <= toBlock) {
+    const end = start + CHUNK_SIZE > toBlock ? toBlock : start + CHUNK_SIZE;
+    try {
+      const logs = await client.getLogs({
+        address: VAULT_ADDRESS,
+        event,
+        fromBlock: start,
+        toBlock: end,
+      });
+      results.push(...logs);
+    } catch {
+      // skip failed chunk
+    }
+    start = end + 1n;
+  }
+
+  return results;
+}
+
 export function useVaultEvents() {
   const [events, setEvents] = useState<VaultEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,28 +80,12 @@ export function useVaultEvents() {
         setError(null);
 
         const currentBlock = await client.getBlockNumber();
-        // Arc Testnet may have limited history; fetch last 100k blocks
-        const fromBlock = currentBlock > 100000n ? currentBlock - 100000n : 0n;
+        const fromBlock = currentBlock > 50000n ? currentBlock - 50000n : 0n;
 
         const [depositLogs, paymentLogs, distributionLogs] = await Promise.all([
-          client.getLogs({
-            address: VAULT_ADDRESS,
-            event: DEPOSIT_ABI,
-            fromBlock,
-            toBlock: "latest",
-          }),
-          client.getLogs({
-            address: VAULT_ADDRESS,
-            event: PAYMENT_ABI,
-            fromBlock,
-            toBlock: "latest",
-          }),
-          client.getLogs({
-            address: VAULT_ADDRESS,
-            event: DISTRIBUTION_ABI,
-            fromBlock,
-            toBlock: "latest",
-          }),
+          getLogsChunked(DEPOSIT_ABI, fromBlock, currentBlock),
+          getLogsChunked(PAYMENT_ABI, fromBlock, currentBlock),
+          getLogsChunked(DISTRIBUTION_ABI, fromBlock, currentBlock),
         ]);
 
         const allEvents: VaultEvent[] = [];
@@ -117,7 +124,6 @@ export function useVaultEvents() {
           });
         }
 
-        // Fetch block timestamps for all unique blocks
         const uniqueBlocks = [...new Set(allEvents.map((e) => e.blockNumber))];
         const blockTimestamps = new Map<bigint, number>();
 
@@ -127,12 +133,11 @@ export function useVaultEvents() {
               const block = await client.getBlock({ blockNumber: blockNum });
               blockTimestamps.set(blockNum, Number(block.timestamp));
             } catch {
-              // ignore — timestamp stays undefined
+              // ignore
             }
           })
         );
 
-        // Attach timestamps and sort newest first
         const enriched = allEvents
           .map((e) => ({
             ...e,
