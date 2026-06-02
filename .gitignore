@@ -1,0 +1,43 @@
+# dependencies
+node_modules/
+
+# env secrets
+.env
+.env.local
+.env.production
+
+# build
+dist/
+build/
+.next/
+out/
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# macOS
+.DS_Store
+
+# vscode
+.vscode/
+
+# cache
+.cache/
+tmp/
+
+# coverage
+coverage/
+
+# blockchain / wallets
+*.pem
+*.key
+wallet.json
+secret.json
+
+# uploads
+uploads/
+
+# generated
+generated/
