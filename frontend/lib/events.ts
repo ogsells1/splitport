@@ -9,7 +9,7 @@ const arcTestnet = {
 } as const;
 
 const VAULT_ADDRESS = "0x2DB3dbDA6C5F5CfF3234CDBadD049D90412c1774" as const;
-const CHUNK_SIZE = 9000n; // Arc Testnet limit is 10,000 — stay safe
+const CHUNK_SIZE = 9000n;
 
 export type TxType = "deposit" | "payment" | "distribution";
 
@@ -80,7 +80,7 @@ export function useVaultEvents() {
         setError(null);
 
         const currentBlock = await client.getBlockNumber();
-        const fromBlock = currentBlock > 50000n ? currentBlock - 50000n : 0n;
+        const fromBlock = 0n; // scan from genesis
 
         const [depositLogs, paymentLogs, distributionLogs] = await Promise.all([
           getLogsChunked(DEPOSIT_ABI, fromBlock, currentBlock),
