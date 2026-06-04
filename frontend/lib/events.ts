@@ -9,6 +9,7 @@ const arcTestnet = {
 } as const;
 
 const VAULT_ADDRESS = "0x2DB3dbDA6C5F5CfF3234CDBadD049D90412c1774" as const;
+const DEPLOY_BLOCK = 42802682n; // block when contract was deployed
 const CHUNK_SIZE = 9000n;
 
 export type TxType = "deposit" | "payment" | "distribution";
@@ -80,12 +81,11 @@ export function useVaultEvents() {
         setError(null);
 
         const currentBlock = await client.getBlockNumber();
-        const fromBlock = 0n; // scan from genesis
 
         const [depositLogs, paymentLogs, distributionLogs] = await Promise.all([
-          getLogsChunked(DEPOSIT_ABI, fromBlock, currentBlock),
-          getLogsChunked(PAYMENT_ABI, fromBlock, currentBlock),
-          getLogsChunked(DISTRIBUTION_ABI, fromBlock, currentBlock),
+          getLogsChunked(DEPOSIT_ABI, DEPLOY_BLOCK, currentBlock),
+          getLogsChunked(PAYMENT_ABI, DEPLOY_BLOCK, currentBlock),
+          getLogsChunked(DISTRIBUTION_ABI, DEPLOY_BLOCK, currentBlock),
         ]);
 
         const allEvents: VaultEvent[] = [];
