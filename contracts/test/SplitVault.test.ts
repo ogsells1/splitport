@@ -171,6 +171,48 @@ describe("SplitVault", function () {
     });
   });
 
+  describe("distributePartial()", function () {
+    it("распределяет только указанную сумму, остаток остаётся в vault", async function () {
+      const { vault, usdc, vaultAddress, owner, artist, producer, label } = await loadFixture(initializedFixture);
+
+      const amount = ethers.parseUnits("1000", 6);
+      await usdc.mint(owner.address, amount);
+      await usdc.approve(vaultAddress, amount);
+      await vault.depositRevenue(amount);
+
+      const partial = ethers.parseUnits("400", 6); // 40% of pending
+      await expect(vault.distributePartial(partial))
+        .to.emit(vault, "RevenueDistributed");
+
+      // Artist: 50% of 400 = 200 USDC
+      expect(await usdc.balanceOf(artist.address)).to.equal(ethers.parseUnits("200", 6));
+      // Producer: 30% of 400 = 120 USDC
+      expect(await usdc.balanceOf(producer.address)).to.equal(ethers.parseUnits("120", 6));
+      // Label: 20% of 400 = 80 USDC
+      expect(await usdc.balanceOf(label.address)).to.equal(ethers.parseUnits("80", 6));
+
+      // Остаток (600 USDC) остаётся в vault, не уходит owner-у как dust
+      expect(await usdc.balanceOf(vaultAddress)).to.equal(ethers.parseUnits("600", 6));
+    });
+
+    it("revert если сумма больше pending баланса", async function () {
+      const { vault, usdc, vaultAddress, owner } = await loadFixture(initializedFixture);
+      const amount = ethers.parseUnits("100", 6);
+      await usdc.mint(owner.address, amount);
+      await usdc.approve(vaultAddress, amount);
+      await vault.depositRevenue(amount);
+
+      await expect(vault.distributePartial(ethers.parseUnits("200", 6)))
+        .to.be.revertedWithCustomError(vault, "InsufficientBalance");
+    });
+
+    it("revert если сумма = 0", async function () {
+      const { vault } = await loadFixture(initializedFixture);
+      await expect(vault.distributePartial(0))
+        .to.be.revertedWithCustomError(vault, "ZeroAmount");
+    });
+  });
+
   // ── previewShare ───────────────────────────────────────────────────────
 
   describe("previewShare()", function () {
