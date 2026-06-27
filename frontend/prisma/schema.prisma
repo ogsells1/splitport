@@ -41,16 +41,29 @@ model Project {
 model Contributor {
   id         String  @id @default(cuid())
   projectId  String
-  wallet     String
+  wallet     String?
   percentage Int
   role       String
   active     Boolean @default(true)
   totalPaid  BigInt  @default(0)
 
+  // Invite-link flow: owner creates a slot (role+percentage) without a wallet,
+  // shares inviteToken as a link, participant claims it with their own wallet.
+  // claimedByPrivyId is intentionally never exposed via owner-facing API responses —
+  // it exists only to prevent re-claiming an already-claimed invite.
+  status           ContributorStatus @default(CLAIMED)
+  inviteToken      String?           @unique
+  claimedByPrivyId String?
+
   project Project @relation(fields: [projectId], references: [id])
 
   @@unique([projectId, wallet])
   @@map("contributors")
+}
+
+enum ContributorStatus {
+  PENDING
+  CLAIMED
 }
 
 model Transaction {
