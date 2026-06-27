@@ -17,6 +17,7 @@ export async function syncProjectToDb(params: {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
+      ownerPrivyId: process.env.OWNER_PRIVY_ID ?? "cli-admin",
       name: params.name,
       contractAddress: params.contractAddress,
       usdcAddress: params.usdcAddress,

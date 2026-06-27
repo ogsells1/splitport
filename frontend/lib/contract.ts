@@ -1,12 +1,29 @@
 import { type Address } from "viem";
+import splitVaultArtifact from "./SplitVaultArtifact.json";
 
+// Legacy demo project — kept as a fallback default, no longer the only vault.
 export const VAULT_ADDRESS: Address =
   "0x2DB3dbDA6C5F5CfF3234CDBadD049D90412c1774";
 
 export const USDC_ADDRESS: Address =
   "0x3600000000000000000000000000000000000000";
 
+export const SPLIT_VAULT_BYTECODE = splitVaultArtifact.bytecode as `0x${string}`;
+
 export const VAULT_ABI = [
+  {
+    name: "initialize",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "_projectName", type: "string" },
+      { name: "_usdcToken", type: "address" },
+      { name: "_wallets", type: "address[]" },
+      { name: "_percentages", type: "uint256[]" },
+      { name: "_roles", type: "string[]" },
+    ],
+    outputs: [],
+  },
   {
     name: "initialized",
     type: "function",
@@ -100,6 +117,11 @@ export const VAULT_ABI = [
     outputs: [{ type: "bool" }],
   },
 ] as const;
+
+// Full compiler-generated ABI (includes constructor) — used only for deploying
+// a brand new SplitVault via useDeployContract(). Use VAULT_ABI above for
+// reading/writing to an already-deployed vault.
+export const SPLIT_VAULT_DEPLOY_ABI = splitVaultArtifact.abi;
 
 export const USDC_ABI = [
   {
