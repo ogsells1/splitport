@@ -1,0 +1,80 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  privyId   String   @unique
+  email     String?
+  wallet    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projects     Project[]
+  transactions Transaction[]
+
+  @@map("users")
+}
+
+model Project {
+  id              String   @id @default(cuid())
+  name            String
+  contractAddress String   @unique
+  usdcAddress     String
+  chainId         Int      @default(5042002)
+  deployBlock     BigInt?
+  ownerId         String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  owner        User          @relation(fields: [ownerId], references: [id])
+  contributors Contributor[]
+  transactions Transaction[]
+
+  @@map("projects")
+}
+
+model Contributor {
+  id         String  @id @default(cuid())
+  projectId  String
+  wallet     String
+  percentage Int
+  role       String
+  active     Boolean @default(true)
+  totalPaid  BigInt  @default(0)
+
+  project Project @relation(fields: [projectId], references: [id])
+
+  @@unique([projectId, wallet])
+  @@map("contributors")
+}
+
+model Transaction {
+  id          String   @id @default(cuid())
+  projectId   String
+  userId      String?
+  type        TxType
+  amount      BigInt
+  txHash      String   @unique
+  blockNumber BigInt
+  timestamp   DateTime
+  fromAddress String?
+  toAddress   String?
+  role        String?
+  createdAt   DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id])
+  user    User?   @relation(fields: [userId], references: [id])
+
+  @@map("transactions")
+}
+
+enum TxType {
+  DEPOSIT
+  PAYMENT
+  DISTRIBUTION
+}
