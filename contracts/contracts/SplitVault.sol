@@ -79,6 +79,7 @@ contract SplitVault is ReentrancyGuard, Ownable, Pausable {
     error ContributorAlreadyExists();
     error NoContributors();
     error NothingToDistribute();
+    error InsufficientBalance();
     error ZeroAmount();
     error TransferFailed();
 
@@ -241,6 +242,28 @@ contract SplitVault is ReentrancyGuard, Ownable, Pausable {
     {
         uint256 pending = usdcToken.balanceOf(address(this));
         if (pending == 0) revert NothingToDistribute();
+        _distribute(pending);
+    }
+
+    /**
+     * @notice Распределяет указанную сумму (<= pending баланса) между участниками,
+     *         остаток остаётся в vault для последующего distribute().
+     *         Может вызывать owner или любой участник.
+     * @param _amount  Сумма USDC (6 decimals) для распределения
+     */
+    function distributePartial(uint256 _amount)
+        external
+        onlyInitialized
+        whenNotPaused
+        nonReentrant
+    {
+        if (_amount == 0) revert ZeroAmount();
+        uint256 pending = usdcToken.balanceOf(address(this));
+        if (_amount > pending) revert InsufficientBalance();
+        _distribute(_amount);
+    }
+
+    function _distribute(uint256 _amount) internal {
         if (contributors.length == 0) revert NoContributors();
 
         uint256 distributed;
@@ -250,7 +273,7 @@ contract SplitVault is ReentrancyGuard, Ownable, Pausable {
             Contributor storage c = contributors[i];
             if (!c.active) continue;
 
-            uint256 share = (pending * c.percentage) / 10000;
+            uint256 share = (_amount * c.percentage) / 10000;
             if (share == 0) continue;
 
             c.totalPaid += share;
@@ -260,8 +283,8 @@ contract SplitVault is ReentrancyGuard, Ownable, Pausable {
             emit PaymentSent(c.wallet, share, c.role);
         }
 
-        // Dust (остаток от деления) → owner
-        uint256 dust = usdcToken.balanceOf(address(this));
+        // Dust (остаток от деления basis points в пределах _amount) → owner
+        uint256 dust = _amount - distributed;
         if (dust > 0) {
             usdcToken.safeTransfer(owner(), dust);
             distributed += dust;

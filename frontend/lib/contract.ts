@@ -92,6 +92,13 @@ export const VAULT_ABI = [
     outputs: [],
   },
   {
+    name: "distributePartial",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "_amount", type: "uint256" }],
+    outputs: [],
+  },
+  {
     name: "replaceContributors",
     type: "function",
     stateMutability: "nonpayable",

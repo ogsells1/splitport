@@ -76,7 +76,7 @@ export default function Dashboard() {
 
         <div className="grid grid-cols-2 gap-3">
           <DepositModal vaultAddress={vaultAddress} />
-          <DistributeButton vaultAddress={vaultAddress} walletAddress={walletAddress} />
+          <DistributeButton vaultAddress={vaultAddress} />
         </div>
 
         <ContributorsEditor

@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { parseUnits, type Address } from "viem";
-import { useWriteContract, useWaitForTransactionReceipt, useReadContract } from "wagmi";
+import { useWriteContract, usePublicClient } from "wagmi";
+import { useQueryClient } from "@tanstack/react-query";
 import { useWallets } from "@privy-io/react-auth";
 import { USDC_ADDRESS, VAULT_ABI, USDC_ABI } from "@/lib/contract";
 
@@ -22,6 +23,8 @@ export function DepositModal({ vaultAddress }: DepositModalProps) {
   const wallet = wallets[0];
 
   const { writeContractAsync } = useWriteContract();
+  const publicClient = usePublicClient();
+  const queryClient = useQueryClient();
 
   const amountParsed = amount ? parseUnits(amount, 6) : 0n;
 
@@ -47,6 +50,9 @@ export function DepositModal({ vaultAddress }: DepositModalProps) {
         functionName: "depositRevenue",
         args: [amountParsed],
       });
+
+      await publicClient?.waitForTransactionReceipt({ hash: depositTx });
+      queryClient.invalidateQueries();
 
       fetch(`/api/transactions/sync?contractAddress=${vaultAddress}`, { method: "POST" }).catch(() => {});
 

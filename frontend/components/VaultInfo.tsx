@@ -34,12 +34,14 @@ export function VaultInfo({ vaultAddress, walletAddress }: VaultInfoProps) {
     address: vaultAddress,
     abi: VAULT_ABI,
     functionName: "getProjectInfo",
+    query: { refetchInterval: 8000 },
   });
 
   const { data: contributors, isLoading: contribLoading } = useReadContract({
     address: vaultAddress,
     abi: VAULT_ABI,
     functionName: "getContributors",
+    query: { refetchInterval: 8000 },
   });
 
   const { data: owner } = useReadContract({
