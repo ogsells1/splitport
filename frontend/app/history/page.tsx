@@ -124,6 +124,71 @@ function EventRow({ ev }: { ev: VaultEvent }) {
   );
 }
 
+function EventCard({ ev }: { ev: VaultEvent }) {
+  const meta = TYPE_META[ev.type];
+  return (
+    <div className="px-4 py-3 border-b border-white/5 last:border-b-0">
+      <div className="flex items-center justify-between gap-2">
+        <span
+          className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${meta.badge}`}
+        >
+          <span className={`w-1.5 h-1.5 rounded-full ${meta.dot}`} />
+          {meta.label}
+        </span>
+        <span className="font-mono font-semibold text-white tabular-nums text-sm">
+          <span className="text-white/40 text-xs mr-1">USDC</span>
+          {parseFloat(ev.amountFormatted).toFixed(2)}
+        </span>
+      </div>
+
+      <div className="mt-2 flex items-center justify-between gap-2 text-xs text-white/50 font-mono">
+        <span className="truncate">
+          {ev.type === "deposit" && ev.from && (
+            <span title={ev.from}>{shortAddr(ev.from)}</span>
+          )}
+          {ev.type === "payment" && ev.wallet && (
+            <>
+              <span title={ev.wallet}>{shortAddr(ev.wallet)}</span>
+              {ev.role && (
+                <span className="ml-2 text-white/30">[{ev.role}]</span>
+              )}
+            </>
+          )}
+          {ev.type === "distribution" && (
+            <span className="text-white/30">
+              {ev.contributorCount} recipient{ev.contributorCount !== 1 ? "s" : ""}
+            </span>
+          )}
+        </span>
+        <span className="text-white/30 whitespace-nowrap flex-shrink-0">
+          {formatDate(ev.timestamp)}
+        </span>
+      </div>
+
+      {ev.txHash && (
+        <a
+          href={`${EXPLORER_BASE}${ev.txHash}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-2 inline-flex items-center gap-1 text-xs text-white/30 hover:text-white/70 transition-colors font-mono"
+          title={ev.txHash}
+        >
+          {ev.txHash.slice(0, 10)}…
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className="opacity-60">
+            <path
+              d="M1.5 8.5L8.5 1.5M8.5 1.5H3.5M8.5 1.5V6.5"
+              stroke="currentColor"
+              strokeWidth="1.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </a>
+      )}
+    </div>
+  );
+}
+
 function EmptyState() {
   return (
     <tr>
@@ -191,6 +256,38 @@ function SkeletonRows() {
   );
 }
 
+function SkeletonCards() {
+  return (
+    <>
+      {Array.from({ length: 6 }).map((_, i) => (
+        <div key={i} className="px-4 py-3 border-b border-white/5 last:border-b-0 animate-pulse">
+          <div className="flex items-center justify-between gap-2">
+            <div className="h-5 w-20 rounded-full bg-white/5" />
+            <div className="h-4 w-16 rounded bg-white/5" />
+          </div>
+          <div className="mt-2 flex items-center justify-between gap-2">
+            <div className="h-3 w-24 rounded bg-white/5" />
+            <div className="h-3 w-20 rounded bg-white/5" />
+          </div>
+        </div>
+      ))}
+    </>
+  );
+}
+
+function EmptyStateMobile() {
+  return (
+    <div className="py-16 flex flex-col items-center gap-3 text-white/20">
+      <svg width="36" height="36" viewBox="0 0 40 40" fill="none" className="opacity-30">
+        <rect x="6" y="10" width="28" height="22" rx="3" stroke="currentColor" strokeWidth="1.5" />
+        <path d="M6 16h28" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        <path d="M13 24h4M13 28h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
+      <span className="text-sm">No transactions yet</span>
+    </div>
+  );
+}
+
 const FILTERS: { key: TxType | "all"; label: string }[] = [
   { key: "all", label: "All" },
   { key: "deposit", label: "Deposits" },
@@ -226,9 +323,9 @@ export default function HistoryPage() {
         }}
       />
 
-      <div className="relative max-w-5xl mx-auto px-4 sm:px-6 py-12">
+      <div className="relative max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
         {/* Header */}
-        <div className="mb-10">
+        <div className="mb-8 sm:mb-10">
           <a
             href="/dashboard"
             className="inline-flex items-center gap-1.5 text-xs text-white/30 hover:text-white/60 transition-colors mb-6"
@@ -246,7 +343,7 @@ export default function HistoryPage() {
           </a>
 
           <h1
-            className="text-3xl font-bold tracking-tight"
+            className="text-2xl sm:text-3xl font-bold tracking-tight"
             style={{ fontFamily: "'DM Mono', monospace" }}
           >
             Transaction History
@@ -258,7 +355,7 @@ export default function HistoryPage() {
 
         {/* Stats row */}
         {!loading && !error && (
-          <div className="grid grid-cols-3 gap-3 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8">
             {[
               {
                 label: "Total Deposited",
@@ -290,12 +387,12 @@ export default function HistoryPage() {
         )}
 
         {/* Filter tabs */}
-        <div className="flex gap-1 mb-4 p-1 rounded-lg bg-white/4 border border-white/8 w-fit">
+        <div className="flex gap-1 mb-4 p-1 rounded-lg bg-white/4 border border-white/8 w-fit max-w-full overflow-x-auto">
           {FILTERS.map((f) => (
             <button
               key={f.key}
               onClick={() => setFilter(f.key)}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all whitespace-nowrap ${
                 filter === f.key
                   ? "bg-white/10 text-white shadow-sm"
                   : "text-white/40 hover:text-white/70"
@@ -311,43 +408,59 @@ export default function HistoryPage() {
           ))}
         </div>
 
-        {/* Table */}
+        {/* Table (sm and up) / Cards (mobile) */}
         <div className="rounded-xl border border-white/8 overflow-hidden">
           {error ? (
             <div className="py-16 text-center text-sm text-red-400/70">
               Failed to load events: {error}
             </div>
           ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-white/8 bg-white/3">
-                  <th className="py-3 pl-6 pr-4 text-left text-xs font-medium text-white/30 uppercase tracking-wider">
-                    Type
-                  </th>
-                  <th className="py-3 px-4 text-right text-xs font-medium text-white/30 uppercase tracking-wider">
-                    Amount
-                  </th>
-                  <th className="py-3 px-4 text-left text-xs font-medium text-white/30 uppercase tracking-wider">
-                    Detail
-                  </th>
-                  <th className="py-3 px-4 text-left text-xs font-medium text-white/30 uppercase tracking-wider">
-                    Date
-                  </th>
-                  <th className="py-3 pl-4 pr-6 text-right text-xs font-medium text-white/30 uppercase tracking-wider">
-                    Tx
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/0">
+            <>
+              {/* Mobile card list */}
+              <div className="sm:hidden">
                 {loading ? (
-                  <SkeletonRows />
+                  <SkeletonCards />
                 ) : filtered.length === 0 ? (
-                  <EmptyState />
+                  <EmptyStateMobile />
                 ) : (
-                  filtered.map((ev, i) => <EventRow key={i} ev={ev} />)
+                  filtered.map((ev, i) => <EventCard key={i} ev={ev} />)
                 )}
-              </tbody>
-            </table>
+              </div>
+
+              {/* Desktop table */}
+              <div className="hidden sm:block overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-white/8 bg-white/3">
+                      <th className="py-3 pl-6 pr-4 text-left text-xs font-medium text-white/30 uppercase tracking-wider">
+                        Type
+                      </th>
+                      <th className="py-3 px-4 text-right text-xs font-medium text-white/30 uppercase tracking-wider">
+                        Amount
+                      </th>
+                      <th className="py-3 px-4 text-left text-xs font-medium text-white/30 uppercase tracking-wider">
+                        Detail
+                      </th>
+                      <th className="py-3 px-4 text-left text-xs font-medium text-white/30 uppercase tracking-wider">
+                        Date
+                      </th>
+                      <th className="py-3 pl-4 pr-6 text-right text-xs font-medium text-white/30 uppercase tracking-wider">
+                        Tx
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/0">
+                    {loading ? (
+                      <SkeletonRows />
+                    ) : filtered.length === 0 ? (
+                      <EmptyState />
+                    ) : (
+                      filtered.map((ev, i) => <EventRow key={i} ev={ev} />)
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
 
