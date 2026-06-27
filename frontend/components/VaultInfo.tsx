@@ -96,7 +96,7 @@ export function VaultInfo({ vaultAddress, walletAddress }: VaultInfoProps) {
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: "Pending", value: fmt(pending), highlight: pending > 0n },
+          { label: "Balance", value: fmt(pending), highlight: pending > 0n },
           { label: "Deposited", value: fmt(info.totalDeposited) },
           { label: "Distributed", value: fmt(info.totalDistributed) },
           { label: "Contributors", value: String(info.contributorCount) },
