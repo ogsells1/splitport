@@ -1,8 +1,8 @@
 // frontend/app/api/transactions/sync/route.ts
-// POST /api/transactions/sync — читает события из chain и сохраняет в БД
-// Вызывать вручную или по cron (Vercel Cron Jobs)
+// POST /api/transactions/sync — читает события из chain и сохраняет в БД (ручной вызов)
+// GET  /api/transactions/sync — то же самое, вызывается Vercel Cron Job (см. vercel.json)
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createPublicClient, http, parseAbiItem, formatUnits } from "viem";
 
@@ -48,8 +48,7 @@ async function getLogsChunked(event: any, fromBlock: bigint, toBlock: bigint) {
   return results;
 }
 
-export async function POST() {
-  try {
+async function runSync() {
     // 1. Найти проект в БД
     const project = await prisma.project.findUnique({
       where: { contractAddress: VAULT_ADDRESS },
@@ -154,8 +153,31 @@ export async function POST() {
       fromBlock: fromBlock.toString(),
       toBlock: toBlock.toString(),
     });
+}
+
+function isAuthorizedCron(request: NextRequest) {
+  const secret = process.env.CRON_SECRET;
+  if (!secret) return true; // no secret configured — allow (dev/local)
+  return request.headers.get("authorization") === `Bearer ${secret}`;
+}
+
+export async function POST() {
+  try {
+    return await runSync();
   } catch (error: any) {
     console.error("[POST /api/transactions/sync]", error);
+    return NextResponse.json({ error: error?.message ?? "Internal server error" }, { status: 500 });
+  }
+}
+
+export async function GET(request: NextRequest) {
+  if (!isAuthorizedCron(request)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  try {
+    return await runSync();
+  } catch (error: any) {
+    console.error("[GET /api/transactions/sync]", error);
     return NextResponse.json({ error: error?.message ?? "Internal server error" }, { status: 500 });
   }
 }
