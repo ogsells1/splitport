@@ -75,6 +75,17 @@ export const VAULT_ABI = [
     outputs: [],
   },
   {
+    name: "replaceContributors",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "_wallets", type: "address[]" },
+      { name: "_percentages", type: "uint256[]" },
+      { name: "_roles", type: "string[]" },
+    ],
+    outputs: [],
+  },
+  {
     name: "owner",
     type: "function",
     stateMutability: "view",

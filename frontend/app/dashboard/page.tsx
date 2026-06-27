@@ -6,6 +6,7 @@ import { useEffect } from "react";
 import { VaultInfo } from "@/components/VaultInfo";
 import { DepositModal } from "@/components/DepositModal";
 import { DistributeButton } from "@/components/DistributeButton";
+import { ContributorsEditor } from "@/components/ContributorsEditor";
 
 export default function Dashboard() {
   const { ready, authenticated, logout, user } = usePrivy();
@@ -62,6 +63,8 @@ export default function Dashboard() {
           <DepositModal />
           <DistributeButton walletAddress={walletAddress} />
         </div>
+
+        <ContributorsEditor walletAddress={walletAddress} />
 
         <a
           href="/history"
