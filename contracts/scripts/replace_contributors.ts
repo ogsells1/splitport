@@ -1,6 +1,9 @@
 import { ethers } from "hardhat";
+import { syncProjectToDb } from "./lib/syncDb";
 
 const VAULT_ADDRESS = "0x2DB3dbDA6C5F5CfF3234CDBadD049D90412c1774";
+const USDC_ADDRESS  = "0x3600000000000000000000000000000000000000";
+const PROJECT_NAME  = "BYN Split Pay — Demo Project";
 
 const VAULT_ABI = [
   "function replaceContributors(address[],uint256[],string[]) external",
@@ -77,6 +80,14 @@ async function main() {
   );
   console.log("────────────────────────────────────────────────\n");
   console.log("✅  Готово! 0xDead заменён на реального продюсера.\n");
+
+  // --- Sync to DB ---
+  await syncProjectToDb({
+    name: PROJECT_NAME,
+    contractAddress: VAULT_ADDRESS,
+    usdcAddress: USDC_ADDRESS,
+    contributors: NEW_CONTRIBUTORS,
+  });
 }
 
 main().catch((e) => {

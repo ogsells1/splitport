@@ -1,4 +1,5 @@
 import { ethers } from "hardhat";
+import { syncProjectToDb } from "./lib/syncDb";
 
 // ─── CONFIG ────────────────────────────────────────────────────────────────────
 
@@ -84,6 +85,12 @@ async function main() {
   if (isInitialized) {
     console.log("⚠️   Vault уже инициализирован. Читаем текущее состояние...\n");
     await printState(vault);
+    await syncProjectToDb({
+      name: PROJECT_NAME,
+      contractAddress: VAULT_ADDRESS,
+      usdcAddress: USDC_ADDRESS,
+      contributors: CONTRIBUTORS,
+    });
     return;
   }
 
@@ -115,6 +122,15 @@ async function main() {
 
   // --- Print final state ---
   await printState(vault);
+
+  // --- Sync to DB ---
+  await syncProjectToDb({
+    name: PROJECT_NAME,
+    contractAddress: VAULT_ADDRESS,
+    usdcAddress: USDC_ADDRESS,
+    deployBlock: receipt.blockNumber,
+    contributors: CONTRIBUTORS,
+  });
 }
 
 async function printState(vault: ethers.Contract) {
