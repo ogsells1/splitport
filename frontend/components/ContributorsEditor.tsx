@@ -25,6 +25,7 @@ export function ContributorsEditor({ vaultAddress, walletAddress, ownerPrivyId }
   const [open, setOpen] = useState(false);
   const [rows, setRows] = useState<Row[]>([]);
   const [pendingInvites, setPendingInvites] = useState<Row[]>([]);
+  const [readyToSync, setReadyToSync] = useState<Row[]>([]);
   const [step, setStep] = useState<Step>("idle");
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -80,9 +81,10 @@ export function ContributorsEditor({ vaultAddress, walletAddress, ownerPrivyId }
       if (!res.ok) return;
       const data = await res.json();
       const onChainWallets = new Set((contributors ?? []).map((c) => c.wallet.toLowerCase()));
+      const rowWallets = new Set(rows.map((r) => r.wallet.toLowerCase()).filter(Boolean));
 
       const stillWaiting: Row[] = [];
-      const claimedNotOnChain: Row[] = [];
+      const claimedNotSynced: Row[] = [];
 
       for (const c of data.contributors ?? []) {
         if (c.status === "PENDING") {
@@ -93,8 +95,12 @@ export function ContributorsEditor({ vaultAddress, walletAddress, ownerPrivyId }
             status: "PENDING",
             inviteToken: c.inviteToken,
           });
-        } else if (c.wallet && !onChainWallets.has(c.wallet.toLowerCase())) {
-          claimedNotOnChain.push({
+        } else if (
+          c.wallet &&
+          !onChainWallets.has(c.wallet.toLowerCase()) &&
+          !rowWallets.has(c.wallet.toLowerCase())
+        ) {
+          claimedNotSynced.push({
             wallet: c.wallet,
             percentage: String(c.percentage / 100),
             role: c.role,
@@ -104,21 +110,29 @@ export function ContributorsEditor({ vaultAddress, walletAddress, ownerPrivyId }
       }
 
       setPendingInvites(stillWaiting);
-      if (claimedNotOnChain.length > 0) {
-        setRows((prev) => {
-          const existing = new Set(prev.map((r) => r.wallet.toLowerCase()));
-          const toAdd = claimedNotOnChain.filter((r) => !existing.has(r.wallet.toLowerCase()));
-          return toAdd.length > 0 ? [...prev, ...toAdd] : prev;
-        });
-      }
+      setReadyToSync(claimedNotSynced);
     } catch {
       // best-effort
     }
   }
 
+  // Poll for claims even while the editor is closed, so the owner sees a
+  // badge on the "Edit Contributors" button as soon as someone claims a link.
   useEffect(() => {
-    if (open) refreshInvites();
-  }, [open, contributors]);
+    if (!isOwner) return;
+    refreshInvites();
+    const interval = setInterval(refreshInvites, open ? 6000 : 20000);
+    return () => clearInterval(interval);
+  }, [open, contributors, isOwner]);
+
+  function applyClaimedToRows() {
+    setRows((prev) => {
+      const existing = new Set(prev.map((r) => r.wallet.toLowerCase()));
+      const toAdd = readyToSync.filter((r) => !existing.has(r.wallet.toLowerCase()));
+      return toAdd.length > 0 ? [...prev, ...toAdd] : prev;
+    });
+    setReadyToSync([]);
+  }
 
   if (!isOwner) return null;
 
@@ -238,9 +252,14 @@ export function ContributorsEditor({ vaultAddress, walletAddress, ownerPrivyId }
     return (
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center justify-center gap-2 py-3 px-4 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-medium rounded-xl transition-colors text-sm"
+        className="relative flex items-center justify-center gap-2 py-3 px-4 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-medium rounded-xl transition-colors text-sm"
       >
         <span>✎</span> Edit Contributors
+        {readyToSync.length > 0 && (
+          <span className="absolute -top-2 -right-2 flex items-center gap-1 bg-emerald-500 text-white text-[10px] font-semibold rounded-full px-1.5 py-0.5 leading-none">
+            ✓ {readyToSync.length}
+          </span>
+        )}
       </button>
     );
   }
@@ -317,6 +336,36 @@ export function ContributorsEditor({ vaultAddress, walletAddress, ownerPrivyId }
             </div>
           ))}
         </div>
+
+        {readyToSync.length > 0 && (
+          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 space-y-2">
+            <p className="text-sm font-medium text-emerald-800">
+              ✓ {readyToSync.length === 1 ? "Invite confirmed" : `${readyToSync.length} invites confirmed`} —
+              wallet linked
+            </p>
+            <ul className="space-y-1">
+              {readyToSync.map((r, i) => (
+                <li key={i} className="text-xs text-emerald-700 flex items-center justify-between gap-2">
+                  <span>
+                    <span className="font-medium">{r.role}</span> · {parseFloat(r.percentage).toFixed(2)}%
+                  </span>
+                  <span className="font-mono text-emerald-600">
+                    {r.wallet.slice(0, 6)}…{r.wallet.slice(-4)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <p className="text-xs text-emerald-700">
+              Add them to the list below, then adjust everyone's percentages back to 100% before saving.
+            </p>
+            <button
+              onClick={applyClaimedToRows}
+              className="w-full py-2 text-sm bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition-colors"
+            >
+              Add to contributors list
+            </button>
+          </div>
+        )}
 
         {pendingInvites.length > 0 && (
           <div className="space-y-2">
