@@ -222,12 +222,14 @@ CONTRACT_ADDRESS=0x2DB3dbDA6C5F5CfF3234CDBadD049D90412c1774
 - [x] Заполнить БД через POST /api/project
 - [x] Протестировать POST /api/transactions/sync (идемпотентно, 5 транзакций синхронизировано)
 - [x] Добавить env в Vercel (DATABASE_URL, DIRECT_URL) + задеплоить backend ✅ https://byn-split-pay.vercel.app
-- [ ] Мобильная адаптация
+- [x] Мобильная адаптация /history (карточный вид < 640px), дашборд/главная уже были адаптивны
+- [x] Auto-sync проекта в БД после deploy/initialize/replaceContributors (contracts/scripts/lib/syncDb.ts)
+- [x] Vercel Cron Job для /api/transactions/sync (раз в сутки, защищён CRON_SECRET)
 
 ## Следующие шаги
-1. Мобильная адаптация дашборда и /history
-2. Настроить периодический sync (Vercel Cron Job → POST /api/transactions/sync), чтобы история обновлялась без ручного вызова
-3. Привязать создание Project в БД к реальному flow деплоя контракта (сейчас POST /api/project вызван вручную с хардкод-данными)
+1. Рассмотреть Vercel Pro, если нужен sync чаще раза в сутки (сейчас Hobby-лимит на cron)
+2. UI для создания нового проекта (сейчас контрибьюторы задаются только через хардкод в contracts/scripts)
+3. Unified Balance — V2, AI Split — V3 (см. ниже)
 
 ## Важные решения
 1. Gas token на Arc = USDC (не ETH) — учитывать везде
