@@ -6,11 +6,11 @@
 
 ## Стек
 - Frontend: Next.js 14 + TypeScript + TailwindCSS
-- Backend: Next.js API routes + Prisma 7.8.0 + PostgreSQL (Supabase) — в процессе
+- Backend: Next.js API routes + Prisma 7.8.0 + PostgreSQL (Supabase) ✅ работает на проде
 - Blockchain: Arc Testnet (Chain ID: 5042002, RPC: https://rpc.testnet.arc.network)
 - Contracts: Solidity + Hardhat + OpenZeppelin
 - Auth: Privy (Google login + embedded wallets)
-- Deploy: Vercel (frontend) ✅
+- Deploy: Vercel (frontend + backend) ✅
 
 ## Arc Testnet
 - RPC: https://rpc.testnet.arc.network
@@ -48,7 +48,7 @@ byn-split-pay/
     │   │   └── page.tsx   ✅ с кнопкой View Transaction History
     │   ├── history/
     │   │   └── page.tsx   ✅ страница истории транзакций
-    │   └── api/           ← создано, но НЕ работает — blocker с Prisma
+    │   └── api/           ✅ работает (project, transactions, transactions/sync)
     │       ├── project/
     │       │   └── route.ts
     │       └── transactions/
@@ -63,13 +63,13 @@ byn-split-pay/
     │   ├── contract.ts
     │   ├── wagmi.ts
     │   ├── events.ts      ✅ хук useVaultEvents с chunked getLogs
-    │   └── prisma.ts      ← создан, использует PrismaPg adapter
+    │   └── prisma.ts      ✅ PrismaPg adapter
     ├── prisma/
-    │   └── schema.prisma  ← создан (без url/directUrl — Prisma 7 требует)
-    ├── prisma.config.ts   ← создан, но НЕ работает — blocker
+    │   └── schema.prisma  ✅ применена к Supabase (db push)
+    ├── prisma.config.ts   ✅ datasource.url + dotenv .env.local
     ├── tsconfig.json
-    ├── .env.local         ← DATABASE_URL и DIRECT_URL заполнены (Supabase)
-    └── package.json
+    ├── .env.local         ✅ DATABASE_URL/DIRECT_URL — Supabase pooler (eu-west-1)
+    └── package.json       ✅ postinstall: prisma generate
 
 ## Core Flow
 Create Project → Add Contributors → Set Percentages →
@@ -146,90 +146,51 @@ Security: ReentrancyGuard, Ownable, Pausable, SafeERC20
 8. /history → история транзакций из chain (getLogs) ✅
 9. Vercel деплой → сайт публично доступен ✅
 
-## ⚠️ ТЕКУЩИЙ BLOCKER — Prisma 7.8.0 + prisma db push
+## ✅ Backend / Prisma + Supabase — решено
 
-### Проблема
-Prisma 7.8.0 полностью изменил конфигурацию:
-- `url` и `directUrl` в `schema.prisma` больше НЕ поддерживаются
-- Теперь нужен `prisma.config.ts` с `defineConfig()`
-- `prisma db push` требует `datasource.url` в `prisma.config.ts`
-- Все попытки задать `db.url()` в `prisma.config.ts` дают ту же ошибку:
-  `Error: The datasource.url property is required in your Prisma config file when using prisma db push`
-
-### Что уже сделано
-1. `prisma/schema.prisma` — без `url`/`directUrl`, только `provider = "postgresql"`
-2. `prisma.config.ts` — с `defineConfig({ earlyAccess: true, migrate: { adapter() {...} }, db: { url() {...} } })`
-3. Установлены: `@prisma/adapter-pg`, `pg`, `@types/pg`
-4. `.env.local` заполнен: `DATABASE_URL` (порт 6543, pgbouncer) и `DIRECT_URL` (порт 5432)
-5. `lib/prisma.ts` — использует `PrismaPg` adapter
-
-### Текущий `prisma.config.ts` (не работает)
+### Как был решён blocker Prisma 7.8.0
+- В Prisma 7.8.0 `PrismaConfig.datasource` — это `{ url?: string }` (обычная строка), без `earlyAccess`, `migrate.adapter()`, `db.url()` — этих полей в типе вообще нет
+- Рабочий `prisma.config.ts`:
 ```typescript
 import path from "path";
+import dotenv from "dotenv";
 import { defineConfig } from "prisma/config";
-import { PrismaPg } from "@prisma/adapter-pg";
-import pg from "pg";
+
+dotenv.config({ path: path.join(__dirname, ".env.local") });
 
 export default defineConfig({
-  earlyAccess: true,
   schema: path.join("prisma", "schema.prisma"),
-  migrate: {
-    async adapter() {
-      const pool = new pg.Pool({
-        connectionString: process.env.DIRECT_URL,
-      });
-      return new PrismaPg(pool);
-    },
-  },
-  db: {
-    async url() {
-      return process.env.DIRECT_URL ?? "";
-    },
+  datasource: {
+    url: process.env.DIRECT_URL,
   },
 });
 ```
+- Важно: Prisma CLI по умолчанию подгружает `.env`, а НЕ `.env.local` — поэтому нужен явный `dotenv.config()` в конфиге
+- `schema.prisma` без `url`/`directUrl` в блоке `datasource db`
 
-### Текущий `prisma/schema.prisma`
-```prisma
-generator client {
-  provider = "prisma-client-js"
-}
+### Supabase
+- Project: `ofiblax1@gmail.com's Project` (lwvyknrmowbcnrzdcyqd)
+- ⚠️ Direct connection (`db.<ref>.supabase.co:5432`) резолвится только в IPv6 — не работает на IPv4-only сетях
+- Используется **pooler**: `aws-0-eu-west-1.pooler.supabase.com`
+  - `DATABASE_URL` — порт 6543, `?pgbouncer=true`
+  - `DIRECT_URL` — порт 5432
+- Пароль с `$` нужно URL-кодировать как `%24`
 
-datasource db {
-  provider = "postgresql"
-}
-```
+### Vercel build
+- Vercel не запускает `prisma generate` автоматически → добавлен `"postinstall": "prisma generate"` в `package.json`
+- `next build` со strict TS требует явных типов в `.map()` (implicit `any` — ошибка)
 
-### Что нужно выяснить в Claude Code
-1. Запустить диагностику:
-```bash
-cat node_modules/prisma/package.json | grep '"version"' | head -1
-cat node_modules/prisma/config.d.ts 2>/dev/null | head -80
-ls node_modules/@prisma/adapter-pg/
-```
-2. Найти правильный синтаксис `prisma.config.ts` для `prisma db push` в версии 7.8.0
-3. Либо — рассмотреть даунгрейд до Prisma 5.x где `url` в schema.prisma ещё работает
-
-### Альтернативное решение (если Prisma 7 не поддаётся)
-Даунгрейд до Prisma 5.22 (стабильная, LTS):
-```bash
-npm install prisma@5.22 @prisma/client@5.22
-# убрать prisma.config.ts
-# вернуть url = env("DATABASE_URL") и directUrl = env("DIRECT_URL") в schema.prisma
-npx prisma db push
-```
-
-## Database Schema (реализована, но НЕ применена к БД)
+## Database Schema (реализована и применена к БД ✅)
 - `users` — id, privyId, email, wallet, createdAt
 - `projects` — id, name, contractAddress, usdcAddress, chainId, deployBlock, ownerId
 - `contributors` — id, projectId, wallet, percentage, role, active, totalPaid
 - `transactions` — id, projectId, type (DEPOSIT/PAYMENT/DISTRIBUTION), amount, txHash, blockNumber, timestamp
 
-## API Routes (созданы, НЕ протестированы — ждут БД)
+## API Routes (созданы, протестированы локально и на проде ✅)
 - `GET /api/project` — проект + участники
 - `POST /api/project` — создать/обновить проект
 - `GET /api/transactions` — список транзакций (с фильтром по type, пагинация)
-- `POST /api/transactions/sync` — читает события из chain (viem getLogs) → сохраняет в БД
+- `POST /api/transactions/sync` — читает события из chain (viem getLogs) → сохраняет в БД, идемпотентно
 
 ## contracts/.env
 ```
@@ -257,20 +218,16 @@ CONTRACT_ADDRESS=0x2DB3dbDA6C5F5CfF3234CDBadD049D90412c1774
 - [x] Prisma schema создана (Users, Projects, Contributors, Transactions)
 - [x] API routes созданы (project, transactions, transactions/sync)
 - [x] lib/prisma.ts создан с PrismaPg adapter
-- [ ] ⚠️ prisma db push — BLOCKER (Prisma 7.8.0 конфиг)
-- [ ] Заполнить БД через POST /api/project
-- [ ] Протестировать POST /api/transactions/sync
-- [ ] Добавить env в Vercel + задеплоить backend
+- [x] prisma db push — blocker решён (datasource как строка, без migrate.adapter/db.url())
+- [x] Заполнить БД через POST /api/project
+- [x] Протестировать POST /api/transactions/sync (идемпотентно, 5 транзакций синхронизировано)
+- [x] Добавить env в Vercel (DATABASE_URL, DIRECT_URL) + задеплоить backend ✅ https://byn-split-pay.vercel.app
 - [ ] Мобильная адаптация
 
-## Следующие шаги (после решения blocker)
-1. Решить Prisma 7.8.0 blocker (или даунгрейд до 5.x)
-2. `npx prisma db push` → применить схему к Supabase
-3. `POST /api/project` → заполнить проект в БД
-4. `POST /api/transactions/sync` → синхронизировать историю из chain
-5. Добавить `DATABASE_URL` и `DIRECT_URL` в Vercel env
-6. `vercel --prod` → задеплоить с backend
-7. Мобильная адаптация дашборда и /history
+## Следующие шаги
+1. Мобильная адаптация дашборда и /history
+2. Настроить периодический sync (Vercel Cron Job → POST /api/transactions/sync), чтобы история обновлялась без ручного вызова
+3. Привязать создание Project в БД к реальному flow деплоя контракта (сейчас POST /api/project вызван вручную с хардкод-данными)
 
 ## Важные решения
 1. Gas token на Arc = USDC (не ETH) — учитывать везде
