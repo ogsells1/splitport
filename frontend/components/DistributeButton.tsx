@@ -2,27 +2,28 @@
 
 import { useState } from "react";
 import { useWriteContract, useReadContract } from "wagmi";
-import { formatUnits } from "viem";
-import { VAULT_ADDRESS, VAULT_ABI } from "@/lib/contract";
+import { formatUnits, type Address } from "viem";
+import { VAULT_ABI } from "@/lib/contract";
 
 interface DistributeButtonProps {
+  vaultAddress: Address;
   walletAddress?: string;
 }
 
-export function DistributeButton({ walletAddress }: DistributeButtonProps) {
+export function DistributeButton({ vaultAddress, walletAddress }: DistributeButtonProps) {
   const [status, setStatus] = useState<"idle" | "pending" | "done" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
 
   const { writeContractAsync } = useWriteContract();
 
   const { data: info } = useReadContract({
-    address: VAULT_ADDRESS,
+    address: vaultAddress,
     abi: VAULT_ABI,
     functionName: "getProjectInfo",
   });
 
   const { data: owner } = useReadContract({
-    address: VAULT_ADDRESS,
+    address: vaultAddress,
     abi: VAULT_ABI,
     functionName: "owner",
   });
@@ -42,10 +43,12 @@ export function DistributeButton({ walletAddress }: DistributeButtonProps) {
 
     try {
       await writeContractAsync({
-        address: VAULT_ADDRESS,
+        address: vaultAddress,
         abi: VAULT_ABI,
         functionName: "distribute",
       });
+
+      fetch(`/api/transactions/sync?contractAddress=${vaultAddress}`, { method: "POST" }).catch(() => {});
 
       setStatus("done");
       setTimeout(() => setStatus("idle"), 3000);

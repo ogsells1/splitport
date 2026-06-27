@@ -1,10 +1,11 @@
 "use client";
 
 import { useReadContract, useReadContracts } from "wagmi";
-import { formatUnits } from "viem";
-import { VAULT_ADDRESS, VAULT_ABI } from "@/lib/contract";
+import { formatUnits, type Address } from "viem";
+import { VAULT_ABI } from "@/lib/contract";
 
 interface VaultInfoProps {
+  vaultAddress: Address;
   walletAddress?: string;
 }
 
@@ -28,21 +29,21 @@ function shortAddr(addr: string) {
   return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
 }
 
-export function VaultInfo({ walletAddress }: VaultInfoProps) {
+export function VaultInfo({ vaultAddress, walletAddress }: VaultInfoProps) {
   const { data: info, isLoading: infoLoading } = useReadContract({
-    address: VAULT_ADDRESS,
+    address: vaultAddress,
     abi: VAULT_ABI,
     functionName: "getProjectInfo",
   });
 
   const { data: contributors, isLoading: contribLoading } = useReadContract({
-    address: VAULT_ADDRESS,
+    address: vaultAddress,
     abi: VAULT_ABI,
     functionName: "getContributors",
   });
 
   const { data: owner } = useReadContract({
-    address: VAULT_ADDRESS,
+    address: vaultAddress,
     abi: VAULT_ABI,
     functionName: "owner",
   });
@@ -182,12 +183,12 @@ export function VaultInfo({ walletAddress }: VaultInfoProps) {
       </div>
 
       <a
-        href={`https://testnet.arcscan.app/address/${VAULT_ADDRESS}`}
+        href={`https://testnet.arcscan.app/address/${vaultAddress}`}
         target="_blank"
         rel="noopener noreferrer"
         className="flex items-center gap-2 text-xs text-gray-400 hover:text-gray-600 transition-colors font-mono bg-white border border-gray-200 rounded-xl px-3 py-2"
       >
-        <span>{VAULT_ADDRESS}</span>
+        <span>{vaultAddress}</span>
         <svg className="w-3 h-3 ml-auto flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
         </svg>

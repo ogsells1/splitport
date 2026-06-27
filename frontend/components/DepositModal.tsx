@@ -1,14 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { parseUnits } from "viem";
+import { parseUnits, type Address } from "viem";
 import { useWriteContract, useWaitForTransactionReceipt, useReadContract } from "wagmi";
 import { useWallets } from "@privy-io/react-auth";
-import { VAULT_ADDRESS, USDC_ADDRESS, VAULT_ABI, USDC_ABI } from "@/lib/contract";
+import { USDC_ADDRESS, VAULT_ABI, USDC_ABI } from "@/lib/contract";
 
 type Step = "idle" | "approving" | "depositing" | "done" | "error";
 
-export function DepositModal() {
+interface DepositModalProps {
+  vaultAddress: Address;
+}
+
+export function DepositModal({ vaultAddress }: DepositModalProps) {
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState("");
   const [step, setStep] = useState<Step>("idle");
@@ -32,17 +36,19 @@ export function DepositModal() {
         address: USDC_ADDRESS,
         abi: USDC_ABI,
         functionName: "approve",
-        args: [VAULT_ADDRESS, amountParsed],
+        args: [vaultAddress, amountParsed],
       });
 
       setStep("depositing");
 
       const depositTx = await writeContractAsync({
-        address: VAULT_ADDRESS,
+        address: vaultAddress,
         abi: VAULT_ABI,
         functionName: "depositRevenue",
         args: [amountParsed],
       });
+
+      fetch(`/api/transactions/sync?contractAddress=${vaultAddress}`, { method: "POST" }).catch(() => {});
 
       setStep("done");
       setTimeout(() => {

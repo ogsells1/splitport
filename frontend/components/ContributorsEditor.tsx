@@ -1,19 +1,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { isAddress } from "viem";
+import { isAddress, type Address } from "viem";
 import { useWriteContract, useReadContract } from "wagmi";
-import { VAULT_ADDRESS, VAULT_ABI } from "@/lib/contract";
+import { VAULT_ABI } from "@/lib/contract";
 
 interface ContributorsEditorProps {
+  vaultAddress: Address;
   walletAddress?: string;
+  ownerPrivyId?: string;
 }
 
 type Row = { wallet: string; percentage: string; role: string };
 
 type Step = "idle" | "distributing" | "replacing" | "syncing" | "done" | "error";
 
-export function ContributorsEditor({ walletAddress }: ContributorsEditorProps) {
+export function ContributorsEditor({ vaultAddress, walletAddress, ownerPrivyId }: ContributorsEditorProps) {
   const [open, setOpen] = useState(false);
   const [rows, setRows] = useState<Row[]>([]);
   const [step, setStep] = useState<Step>("idle");
@@ -22,19 +24,19 @@ export function ContributorsEditor({ walletAddress }: ContributorsEditorProps) {
   const { writeContractAsync } = useWriteContract();
 
   const { data: contributors } = useReadContract({
-    address: VAULT_ADDRESS,
+    address: vaultAddress,
     abi: VAULT_ABI,
     functionName: "getContributors",
   });
 
   const { data: owner } = useReadContract({
-    address: VAULT_ADDRESS,
+    address: vaultAddress,
     abi: VAULT_ABI,
     functionName: "owner",
   });
 
   const { data: info } = useReadContract({
-    address: VAULT_ADDRESS,
+    address: vaultAddress,
     abi: VAULT_ABI,
     functionName: "getProjectInfo",
   });
@@ -90,10 +92,11 @@ export function ContributorsEditor({ walletAddress }: ContributorsEditorProps) {
       if (pending > 0n) {
         setStep("distributing");
         await writeContractAsync({
-          address: VAULT_ADDRESS,
+          address: vaultAddress,
           abi: VAULT_ABI,
           functionName: "distribute",
         });
+        fetch(`/api/transactions/sync?contractAddress=${vaultAddress}`, { method: "POST" }).catch(() => {});
       }
 
       setStep("replacing");
@@ -102,7 +105,7 @@ export function ContributorsEditor({ walletAddress }: ContributorsEditorProps) {
       const roles = rows.map((r) => r.role.trim());
 
       await writeContractAsync({
-        address: VAULT_ADDRESS,
+        address: vaultAddress,
         abi: VAULT_ABI,
         functionName: "replaceContributors",
         args: [wallets, percentages, roles],
@@ -113,8 +116,9 @@ export function ContributorsEditor({ walletAddress }: ContributorsEditorProps) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          ownerPrivyId,
           name: info?.name,
-          contractAddress: VAULT_ADDRESS,
+          contractAddress: vaultAddress,
           usdcAddress: info?.usdcToken,
           contributors: rows.map((r) => ({
             wallet: r.wallet,

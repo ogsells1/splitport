@@ -1,15 +1,24 @@
 // frontend/app/api/project/route.ts
-// GET /api/project — возвращает проект + участников
+// GET  /api/project?contractAddress=0x...   — проект + участники
+// POST /api/project                          — создать/обновить проект (вызывается после deploy)
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-const CONTRACT_ADDRESS = "0x2DB3dbDA6C5F5CfF3234CDBadD049D90412c1774";
+const DEFAULT_USDC_ADDRESS = "0x3600000000000000000000000000000000000000";
+const DEFAULT_CHAIN_ID = 5042002;
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const contractAddress = searchParams.get("contractAddress");
+
+    if (!contractAddress) {
+      return NextResponse.json({ error: "contractAddress is required" }, { status: 400 });
+    }
+
     const project = await prisma.project.findUnique({
-      where: { contractAddress: CONTRACT_ADDRESS },
+      where: { contractAddress },
       include: {
         contributors: {
           where: { active: true },
@@ -43,12 +52,11 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  // POST /api/project — создать/обновить проект (вызывается после deploy)
   try {
     const body = await request.json();
-    const { name, contractAddress, usdcAddress, deployBlock, contributors } = body;
+    const { ownerPrivyId, name, contractAddress, usdcAddress, deployBlock, contributors } = body;
 
-    if (!contractAddress || !contributors?.length) {
+    if (!ownerPrivyId || !contractAddress || !contributors?.length) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
@@ -57,7 +65,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Contributors percentages must sum to 10000" }, { status: 400 });
     }
 
-    // Upsert project
     const project = await prisma.project.upsert({
       where: { contractAddress },
       update: {
@@ -67,14 +74,13 @@ export async function POST(request: Request) {
       create: {
         name: name ?? "BYN Split Pay",
         contractAddress,
-        usdcAddress: usdcAddress ?? "0x3600000000000000000000000000000000000000",
-        chainId: 5042002,
+        usdcAddress: usdcAddress ?? DEFAULT_USDC_ADDRESS,
+        chainId: DEFAULT_CHAIN_ID,
         deployBlock: deployBlock ? BigInt(deployBlock) : null,
-        // ownerId нужен — для MVP используем системный user
         owner: {
           connectOrCreate: {
-            where: { privyId: "system" },
-            create: { privyId: "system" },
+            where: { privyId: ownerPrivyId },
+            create: { privyId: ownerPrivyId },
           },
         },
       },
