@@ -38,13 +38,9 @@ export async function POST(request: Request) {
     if (contributors.length === 0) {
       return NextResponse.json({ error: "Project has no contributors" }, { status: 400 });
     }
-    const pending = contributors.filter((c) => c.status === "PENDING" || !c.wallet);
-    if (pending.length > 0) {
-      return NextResponse.json(
-        { error: "All contributors must claim their invite (link a wallet) before distributing." },
-        { status: 400 }
-      );
-    }
+    // Distribution is allowed even before invites are claimed: a contributor who
+    // hasn't linked a wallet yet gets a reserved payout (wallet = null) that
+    // becomes claimable once they accept their invite.
     const totalBps = contributors.reduce((s, c) => s + c.percentage, 0);
     if (totalBps !== 10000) {
       return NextResponse.json(
@@ -74,7 +70,8 @@ export async function POST(request: Request) {
 
     // Split by basis points. Remainder (dust) stays in the treasury.
     const shares = contributors.map((c) => ({
-      wallet: c.wallet!.toLowerCase(),
+      contributorId: c.id,
+      wallet: c.wallet ? c.wallet.toLowerCase() : null,
       amount: (amountUsdc * BigInt(c.percentage)) / 10000n,
     }));
     const distributedSum = shares.reduce((s, x) => s + x.amount, 0n);
@@ -87,6 +84,7 @@ export async function POST(request: Request) {
         data: shares.map((s) => ({
           distributionId: distribution.id,
           projectId: project.id,
+          contributorId: s.contributorId,
           wallet: s.wallet,
           amount: s.amount,
         })),

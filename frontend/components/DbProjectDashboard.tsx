@@ -56,7 +56,6 @@ export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboard
   }, [ownerPrivyId, address]);
 
   const totalPct = contributors.reduce((s, c) => s + c.percentage, 0);
-  const allClaimed = contributors.every((c) => c.status === "CLAIMED" && c.wallet);
 
   async function createInvite() {
     setInviteError("");
@@ -233,19 +232,15 @@ export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboard
         )}
       </div>
 
-      {isOwner && (
+      {isOwner && contributors.length > 0 && (
         <div className="bg-indigo-50 text-indigo-800 text-xs rounded-xl px-4 py-3">
-          {allClaimed && contributors.length > 0 ? (
-            <>
-              Everyone has joined. Go to{" "}
-              <a href="/treasury" className="underline font-medium">
-                Treasury
-              </a>{" "}
-              to distribute funds — each contributor then claims their share from their cabinet.
-            </>
-          ) : (
-            <>Waiting for contributors to claim their invite links before you can distribute.</>
-          )}
+          Go to{" "}
+          <a href="/treasury" className="underline font-medium">
+            Treasury
+          </a>{" "}
+          to distribute funds by %. You can distribute even before everyone has joined — a share is
+          reserved for each pending contributor and becomes claimable as soon as they accept their
+          invite.
         </div>
       )}
     </div>
