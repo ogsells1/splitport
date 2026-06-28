@@ -29,6 +29,9 @@ https://github.com/ogsells1/byn-split-pay
 - Vercel project: https://vercel.com/ofi-s-projects/byn-split-pay
 - Supabase project: lwvyknrmowbcnrzdcyqd (eu-west-1, через pooler — direct connection IPv6-only и не работает на этой сети)
 
+## DB-first проекты (без контракта) ✅ задеплоено
+Новые проекты создаются БЕЗ on-chain контракта — ни owner, ни участник не нуждаются в web3/газе/подписи. `/create` (переписан, без деплоя): имя + контрибьюторы, каждый либо по кошельку (CLAIMED), либо по инвайт-ссылке (PENDING+token). `POST /api/project/create` генерит синтетический `contractAddress` вида `db_<hex>` (чтобы вся маршрутизация по contractAddress продолжала работать) и возвращает инвайт-ссылки. Дашборд `/dashboard/[address]` ветвится: `isAddress` → старый on-chain вид (`VaultInfo` и т.д.); `db_…` → `components/DbProjectDashboard.tsx` (контрибьюторы/инвайты из БД, генерация/отзыв инвайтов, статусы, ссылка на Treasury для distribute). Выплаты — кастодиальные (трежери → distribute по % → claim в кабинете). Старые контракт-проекты (0x…) работают как раньше.
+
 ## Core Flow (multi-project)
 Sign in → `/dashboard` редиректит на первый проект пользователя или на `/create`,
 если проектов нет → `/create` деплоит новый SplitVault из браузера (useDeployContract),
