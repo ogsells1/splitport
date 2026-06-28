@@ -58,7 +58,8 @@ model Contributor {
   inviteToken      String?           @unique
   claimedByPrivyId String?
 
-  project Project @relation(fields: [projectId], references: [id])
+  project Project  @relation(fields: [projectId], references: [id])
+  payouts Payout[]
 
   @@unique([projectId, wallet])
   @@map("contributors")
@@ -149,7 +150,8 @@ model Payout {
   id             String       @id @default(cuid())
   distributionId String
   projectId      String
-  wallet         String       // contributor payout address (lowercased)
+  contributorId  String?      // owning contributor — lets us reserve a share before a wallet is linked
+  wallet         String?      // payout address (lowercased); null while the invite is unclaimed
   amount         BigInt       // gross USDC owed, 6 decimals
   status         PayoutStatus @default(PENDING)
   netAmount      BigInt?      // amount actually sent (amount − fee)
@@ -160,8 +162,10 @@ model Payout {
 
   distribution Distribution @relation(fields: [distributionId], references: [id])
   project      Project      @relation(fields: [projectId], references: [id])
+  contributor  Contributor? @relation(fields: [contributorId], references: [id])
 
   @@index([wallet, status])
+  @@index([contributorId])
   @@map("payouts")
 }
 

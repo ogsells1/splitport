@@ -81,6 +81,13 @@ export async function POST(
       },
     });
 
+    // Reserved payouts created before this invite was claimed now become
+    // claimable: attach the linked wallet so they show up in the cabinet.
+    await prisma.payout.updateMany({
+      where: { contributorId: contributor.id, wallet: null, status: "PENDING" },
+      data: { wallet: wallet.toLowerCase() },
+    });
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("[POST /api/invite/[token]]", error);
