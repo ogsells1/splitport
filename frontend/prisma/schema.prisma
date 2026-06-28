@@ -17,7 +17,6 @@ model User {
   projects         Project[]
   transactions     Transaction[]
   treasuryDeposits TreasuryDeposit[]
-  allocations      Allocation[]
 
   @@map("users")
 }
@@ -33,9 +32,11 @@ model Project {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  owner        User          @relation(fields: [ownerId], references: [id])
-  contributors Contributor[]
-  transactions Transaction[]
+  owner         User           @relation(fields: [ownerId], references: [id])
+  contributors  Contributor[]
+  transactions  Transaction[]
+  distributions Distribution[]
+  payouts       Payout[]
 
   @@map("projects")
 }
@@ -124,18 +125,47 @@ enum TreasuryStatus {
   FAILED
 }
 
-// Allocation OUT of the custodial treasury into a project vault. Executed
-// server-side by the treasury/executor wallet (approve + depositRevenue).
-// Treasury balance = sum(CONFIRMED deposits) − sum(allocations).
-model Allocation {
-  id              String   @id @default(cuid())
-  userId          String
-  contractAddress String
-  amount          BigInt   // USDC, 6 decimals
-  txHash          String   @unique
-  createdAt       DateTime @default(now())
+// Custodial distribution: owner splits an amount from the treasury across a
+// project's contributors by basis points. Creates one Payout per contributor.
+// No on-chain tx — neither owner nor contributor needs a wallet to distribute.
+// Treasury balance = sum(CONFIRMED deposits) − sum(Distribution.total).
+model Distribution {
+  id        String   @id @default(cuid())
+  projectId String
+  total     BigInt   // USDC, 6 decimals — sum of payout amounts created
+  createdAt DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id])
+  project Project  @relation(fields: [projectId], references: [id])
+  payouts Payout[]
 
-  @@map("allocations")
+  @@map("distributions")
+}
+
+// A contributor's claimable share from a distribution. Sits in the treasury
+// until the contributor claims it from their cabinet; on claim the executor
+// wallet transfers (amount − fee) USDC to their wallet and pays the gas, so the
+// contributor effectively covers the transfer fee out of their own share.
+model Payout {
+  id             String       @id @default(cuid())
+  distributionId String
+  projectId      String
+  wallet         String       // contributor payout address (lowercased)
+  amount         BigInt       // gross USDC owed, 6 decimals
+  status         PayoutStatus @default(PENDING)
+  netAmount      BigInt?      // amount actually sent (amount − fee)
+  feeAmount      BigInt?      // transfer fee deducted from the share
+  txHash         String?      @unique
+  createdAt      DateTime     @default(now())
+  claimedAt      DateTime?
+
+  distribution Distribution @relation(fields: [distributionId], references: [id])
+  project      Project      @relation(fields: [projectId], references: [id])
+
+  @@index([wallet, status])
+  @@map("payouts")
+}
+
+enum PayoutStatus {
+  PENDING
+  CLAIMED
 }

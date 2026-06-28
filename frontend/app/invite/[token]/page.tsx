@@ -80,12 +80,19 @@ export default function InvitePage({ params }: { params: { token: string } }) {
   if (claimState === "done") {
     return (
       <Centered>
-        <div className="text-center space-y-2">
+        <div className="text-center space-y-4 max-w-sm">
           <p className="text-2xl">✓</p>
           <p className="text-gray-900 font-medium">You're in!</p>
           <p className="text-gray-500 text-sm">
-            Your wallet has been linked. The project owner will finalize this on-chain.
+            Your wallet is linked. When the project owner sends out payments, your share will show
+            up in your cabinet — sign in any time to claim it to your wallet.
           </p>
+          <a
+            href="/cabinet"
+            className="inline-block w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl transition-colors text-sm"
+          >
+            Go to your cabinet
+          </a>
         </div>
       </Centered>
     );

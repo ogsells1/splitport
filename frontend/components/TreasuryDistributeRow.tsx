@@ -1,79 +1,61 @@
 "use client";
 
 import { useState } from "react";
-import { formatUnits, type Address } from "viem";
-import { useReadContract } from "wagmi";
-import { VAULT_ABI } from "@/lib/contract";
 
-interface TreasuryAllocateRowProps {
+interface TreasuryDistributeRowProps {
   name: string;
-  contractAddress: Address;
-  userPrivyId: string;
-  onAllocated?: () => void;
+  contractAddress: string;
+  ownerPrivyId: string;
+  onDistributed?: () => void;
 }
 
-type Step = "idle" | "allocating" | "done" | "error";
+type Step = "idle" | "distributing" | "done" | "error";
 
-export function TreasuryAllocateRow({
+export function TreasuryDistributeRow({
   name,
   contractAddress,
-  userPrivyId,
-  onAllocated,
-}: TreasuryAllocateRowProps) {
+  ownerPrivyId,
+  onDistributed,
+}: TreasuryDistributeRowProps) {
   const [amount, setAmount] = useState("");
   const [step, setStep] = useState<Step>("idle");
   const [errorMsg, setErrorMsg] = useState("");
 
-  const { data: info } = useReadContract({
-    address: contractAddress,
-    abi: VAULT_ABI,
-    functionName: "getProjectInfo",
-    query: { refetchInterval: 8000 },
-  });
-
-  const vaultBalance = info?.pendingBalance ?? 0n;
   const amountNum = parseFloat(amount);
-  const busy = step === "allocating";
+  const busy = step === "distributing";
 
-  async function handleAllocate() {
+  async function handleDistribute() {
     if (!amountNum || amountNum <= 0) return;
     setErrorMsg("");
-    setStep("allocating");
+    setStep("distributing");
     try {
-      const res = await fetch("/api/treasury/allocate", {
+      const res = await fetch("/api/treasury/distribute", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userPrivyId, contractAddress, amount: amountNum }),
+        body: JSON.stringify({ ownerPrivyId, contractAddress, amount: amountNum }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Allocation failed");
+      if (!res.ok) throw new Error(data.error ?? "Distribution failed");
       setStep("done");
       setAmount("");
-      onAllocated?.();
+      onDistributed?.();
       setTimeout(() => setStep("idle"), 2000);
     } catch (e: any) {
-      setErrorMsg(e.message ?? "Allocation failed");
+      setErrorMsg(e.message ?? "Distribution failed");
       setStep("error");
-      setTimeout(() => setStep("idle"), 5000);
+      setTimeout(() => setStep("idle"), 6000);
     }
   }
 
   return (
     <div className="px-4 py-4 border-b border-gray-100 last:border-b-0">
       <div className="flex items-center justify-between gap-3 mb-2">
-        <div>
-          <p className="text-sm font-medium text-gray-900">{name}</p>
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-gray-900 truncate">{name}</p>
           <p className="text-xs text-gray-400 font-mono mt-0.5">
             {contractAddress.slice(0, 8)}...{contractAddress.slice(-6)}
           </p>
         </div>
-        <p className="text-sm text-gray-500 whitespace-nowrap">
-          vault:{" "}
-          <span className="font-semibold text-gray-900">
-            {parseFloat(formatUnits(vaultBalance, 6)).toFixed(2)}
-          </span>{" "}
-          USDC
-        </p>
       </div>
 
       <div className="flex items-center gap-2">
@@ -90,11 +72,11 @@ export function TreasuryAllocateRow({
           <span className="px-2 text-xs text-gray-400">USDC</span>
         </div>
         <button
-          onClick={handleAllocate}
+          onClick={handleDistribute}
           disabled={!amountNum || amountNum <= 0 || busy || step === "done"}
           className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap"
         >
-          {step === "allocating" ? "Allocating..." : step === "done" ? "✓ Done" : "Allocate"}
+          {step === "distributing" ? "Distributing..." : step === "done" ? "✓ Done" : "Distribute"}
         </button>
       </div>
 
