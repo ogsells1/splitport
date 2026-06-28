@@ -9,6 +9,7 @@ import { DepositModal } from "@/components/DepositModal";
 import { DistributeButton } from "@/components/DistributeButton";
 import { ContributorsEditor } from "@/components/ContributorsEditor";
 import { ProjectSwitcher } from "@/components/ProjectSwitcher";
+import { DbProjectDashboard } from "@/components/DbProjectDashboard";
 
 export default function Dashboard() {
   const { ready, authenticated, logout, user } = usePrivy();
@@ -29,7 +30,9 @@ export default function Dashboard() {
     );
   }
 
-  if (!isAddress(params.address)) {
+  const isDbProject = params.address?.startsWith("db_");
+
+  if (!isDbProject && !isAddress(params.address)) {
     return (
       <div className="min-h-screen flex items-center justify-center px-4">
         <div className="bg-red-50 border border-red-200 rounded-2xl p-4 text-sm text-red-600">
@@ -75,25 +78,31 @@ export default function Dashboard() {
       </header>
 
       <main className="max-w-2xl mx-auto px-4 py-8 space-y-6">
-        <VaultInfo vaultAddress={vaultAddress} walletAddress={walletAddress} />
+        {isDbProject ? (
+          <DbProjectDashboard address={params.address} ownerPrivyId={user?.id ?? ""} />
+        ) : (
+          <>
+            <VaultInfo vaultAddress={vaultAddress} walletAddress={walletAddress} />
 
-        <div className="grid grid-cols-2 gap-3">
-          <DepositModal vaultAddress={vaultAddress} />
-          <DistributeButton vaultAddress={vaultAddress} />
-        </div>
+            <div className="grid grid-cols-2 gap-3">
+              <DepositModal vaultAddress={vaultAddress} />
+              <DistributeButton vaultAddress={vaultAddress} />
+            </div>
 
-        <ContributorsEditor
-          vaultAddress={vaultAddress}
-          walletAddress={walletAddress}
-          ownerPrivyId={user?.id}
-        />
+            <ContributorsEditor
+              vaultAddress={vaultAddress}
+              walletAddress={walletAddress}
+              ownerPrivyId={user?.id}
+            />
 
-        <a
-          href={`/history?project=${vaultAddress}`}
-          className="block w-full text-center text-sm text-gray-400 hover:text-gray-600 transition-colors py-2 border border-gray-200 rounded-xl bg-white"
-        >
-          View Transaction History →
-        </a>
+            <a
+              href={`/history?project=${vaultAddress}`}
+              className="block w-full text-center text-sm text-gray-400 hover:text-gray-600 transition-colors py-2 border border-gray-200 rounded-xl bg-white"
+            >
+              View Transaction History →
+            </a>
+          </>
+        )}
       </main>
     </div>
   );
