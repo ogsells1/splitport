@@ -16,27 +16,28 @@ export async function GET(request: Request) {
     const user = await prisma.user.findUnique({ where: { privyId: userPrivyId } });
     if (!user) {
       // No user row yet — nothing deposited.
-      return NextResponse.json({ balance: "0", deposits: [] });
+      return NextResponse.json({ balance: "0", deposits: [], distributions: [] });
     }
 
-    const [deposits, allocations] = await Promise.all([
+    const [deposits, distributions] = await Promise.all([
       prisma.treasuryDeposit.findMany({
         where: { userId: user.id },
         orderBy: { createdAt: "desc" },
         take: 50,
       }),
-      prisma.allocation.findMany({
-        where: { userId: user.id },
+      prisma.distribution.findMany({
+        where: { project: { ownerId: user.id } },
         orderBy: { createdAt: "desc" },
         take: 50,
+        include: { project: { select: { name: true, contractAddress: true } } },
       }),
     ]);
 
     const confirmed = deposits
       .filter((d) => d.status === "CONFIRMED")
       .reduce((sum, d) => sum + d.amount, 0n);
-    const allocated = allocations.reduce((sum, a) => sum + a.amount, 0n);
-    const balance = confirmed - allocated;
+    const distributed = distributions.reduce((sum, d) => sum + d.total, 0n);
+    const balance = confirmed - distributed;
 
     return NextResponse.json({
       balance: balance.toString(),
@@ -49,12 +50,12 @@ export async function GET(request: Request) {
         createdAt: d.createdAt,
         confirmedAt: d.confirmedAt,
       })),
-      allocations: allocations.map((a) => ({
-        id: a.id,
-        contractAddress: a.contractAddress,
-        amount: a.amount.toString(),
-        txHash: a.txHash,
-        createdAt: a.createdAt,
+      distributions: distributions.map((d) => ({
+        id: d.id,
+        projectName: d.project.name,
+        contractAddress: d.project.contractAddress,
+        total: d.total.toString(),
+        createdAt: d.createdAt,
       })),
     });
   } catch (error) {

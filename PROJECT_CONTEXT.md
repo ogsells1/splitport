@@ -115,12 +115,15 @@ Security: ReentrancyGuard, Ownable, Pausable, SafeERC20.
 ## Invite-link flow (контрибьюторы) ✅
 Owner на дашборде («Edit Contributors» → «Invite by Link») создаёт слот роль+% без кошелька → `POST /api/invite` отдаёт `inviteToken` → ссылка `/invite/[token]`. Участник логинится через Privy и привязывает свой кошелёк (`POST /api/invite/[token]`). Owner видит подтверждение (бейдж + баннер), добавляет в список и пересчитывает % до 100, затем `replaceContributors` (on-chain). Owner НЕ видит связку личность↔адрес (адрес on-chain публичен всегда, скрыта именно личность). `DELETE /api/invite/[token]` — отзыв неклеймнутого. API: `frontend/app/api/invite/`, UI: `app/invite/[token]/page.tsx` + `components/ContributorsEditor.tsx`.
 
-## Treasury (кастодиальный баланс) ✅ задеплоено
-Страница `/treasury`: пополнение баланса картой (Stripe Checkout) или криптой (USDC transfer на treasury-кошелёк) + **распределение в проекты** (allocate). Баланс = sum(CONFIRMED deposits) − sum(allocations). Тестнет: курс 1 USD = 1 USDC захардкожен. ⚠️ Кастодиальная модель (отход от non-custodial).
-- **Пополнение** API: `route`=GET баланс/депозиты/аллокации, `checkout`=Stripe session, `webhook`=Stripe confirm (idempotent), `deposit-crypto`=верификация Transfer on-chain по txHash.
-- **Allocate** (`POST /api/treasury/allocate`): executor-кошелёк (`lib/executor.ts`) делает approve + depositRevenue в vault проекта, пишет `Allocation`, дебетует баланс. Проверяет достаточность баланса и on-chain фондов кошелька. UI: `components/TreasuryAllocateRow.tsx`.
-- Env (в Vercel Production ✅): `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_TREASURY_ADDRESS`, `EXECUTOR_PRIVATE_KEY`. Без ключей эндпоинты отдают 503, UI не падает.
-- ⚠️ Для allocate executor-кошелёк (`0xf89f…7A56`, см. memory) должен реально держать USDC (фаусет): card-пополнение кредитит только БД, on-chain USDC туда не поступает.
+## Treasury + кабинет участника (полностью кастодиальная модель) ✅ задеплоено
+Цель: и owner, и участник могут НЕ знать web3. Поток: **owner пополняет трежери (карта/крипта) → распределяет по % → участник в своём кабинете жмёт Claim → executor шлёт USDC на его кошелёк**. Тестнет: 1 USD = 1 USDC. Баланс трежери = sum(CONFIRMED deposits) − sum(Distribution.total).
+- **Пополнение** (`/treasury`): `api/treasury/route`=GET баланс/депозиты/distributions, `checkout`=Stripe session, `webhook`=Stripe confirm (idempotent), `deposit-crypto`=верификация Transfer on-chain по txHash.
+- **Distribute** (`POST /api/treasury/distribute`): owner делит сумму из трежери по basis points контрибьюторов → создаёт `Distribution` + по одному `Payout` на участника (status PENDING). Без on-chain, owner ничего не подписывает. Требует: все контрибьюторы с кошельками (claimed) и сумма % = 100. Dust остаётся в трежери. UI: `components/TreasuryDistributeRow.tsx`.
+- **Кабинет** (`/cabinet`, участник-facing): `GET /api/cabinet?wallet=` — claimable (PENDING payouts по кошельку) + история. `POST /api/cabinet/claim` — executor (`lib/executor.ts`) одним transfer шлёт (gross − fee) USDC на кошелёк, газ платит executor, **комиссия вычитается из доли участника** (fee оценивается estimateContractGas×gasPrice×1.2). Помечает payouts CLAIMED. Privy embedded wallet создаётся автоматически для тех, у кого нет кошелька.
+- Invite-флоу после привязки кошелька ведёт в `/cabinet`.
+- Env (в Vercel Production ✅): `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_TREASURY_ADDRESS`, `EXECUTOR_PRIVATE_KEY`. Без ключей — 503, UI не падает.
+- ⚠️ Executor-кошелёк (`0xf89f…7A56`, см. memory) должен реально держать USDC (фаусет): card-пополнение кредитит только БД, on-chain USDC туда не поступает. Распределение — чисто БД; реальный USDC уходит только при claim.
+- 🗑️ Старый on-chain allocate в SplitVault (`/api/treasury/allocate`, `Allocation` модель, `TreasuryAllocateRow`) удалён — заменён кастодиальным distribute. Старый `/balance` редиректит на `/treasury`.
 
 ⚠️ Demo-проект (`0x2DB3dbDA6C5F5CfF3234CDBadD049D90412c1774`) принадлежит технической учётке `ownerId="system"` — он НЕ появится в списке проектов реального пользователя. Реальные проекты создаются через `/create`.
 
