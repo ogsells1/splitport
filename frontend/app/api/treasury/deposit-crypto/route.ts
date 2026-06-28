@@ -45,7 +45,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ amount: existing.amount.toString(), alreadyRecorded: true });
     }
 
-    const receipt = await client.getTransactionReceipt({ hash: txHash as Hash });
+    let receipt;
+    try {
+      receipt = await client.getTransactionReceipt({ hash: txHash as Hash });
+    } catch {
+      return NextResponse.json(
+        { error: "Transaction not found yet — wait for it to be mined and try again." },
+        { status: 400 }
+      );
+    }
     if (!receipt || receipt.status !== "success") {
       return NextResponse.json({ error: "Transaction not found or failed" }, { status: 400 });
     }
