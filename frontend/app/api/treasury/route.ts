@@ -19,15 +19,24 @@ export async function GET(request: Request) {
       return NextResponse.json({ balance: "0", deposits: [] });
     }
 
-    const deposits = await prisma.treasuryDeposit.findMany({
-      where: { userId: user.id },
-      orderBy: { createdAt: "desc" },
-      take: 50,
-    });
+    const [deposits, allocations] = await Promise.all([
+      prisma.treasuryDeposit.findMany({
+        where: { userId: user.id },
+        orderBy: { createdAt: "desc" },
+        take: 50,
+      }),
+      prisma.allocation.findMany({
+        where: { userId: user.id },
+        orderBy: { createdAt: "desc" },
+        take: 50,
+      }),
+    ]);
 
-    const balance = deposits
+    const confirmed = deposits
       .filter((d) => d.status === "CONFIRMED")
       .reduce((sum, d) => sum + d.amount, 0n);
+    const allocated = allocations.reduce((sum, a) => sum + a.amount, 0n);
+    const balance = confirmed - allocated;
 
     return NextResponse.json({
       balance: balance.toString(),
@@ -39,6 +48,13 @@ export async function GET(request: Request) {
         txHash: d.txHash,
         createdAt: d.createdAt,
         confirmedAt: d.confirmedAt,
+      })),
+      allocations: allocations.map((a) => ({
+        id: a.id,
+        contractAddress: a.contractAddress,
+        amount: a.amount.toString(),
+        txHash: a.txHash,
+        createdAt: a.createdAt,
       })),
     });
   } catch (error) {
