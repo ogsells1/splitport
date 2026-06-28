@@ -56,8 +56,8 @@ export default function Dashboard() {
         <div className="max-w-2xl mx-auto flex items-center justify-between gap-3">
           <ProjectSwitcher ownerPrivyId={user?.id ?? ""} currentAddress={vaultAddress} />
           <div className="flex items-center gap-3">
-            <a href="/balance" className="text-sm text-gray-400 hover:text-gray-600 transition-colors">
-              Balance
+            <a href="/treasury" className="text-sm text-gray-400 hover:text-gray-600 transition-colors">
+              Treasury
             </a>
             {shortAddress && (
               <span className="text-sm text-gray-500 font-mono bg-gray-100 px-2 py-1 rounded-lg">

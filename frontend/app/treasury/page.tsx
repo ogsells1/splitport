@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { useRouter, useSearchParams } from "next/navigation";
 import { formatUnits, parseUnits, getAddress, type Address } from "viem";
-import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { useWriteContract, useWaitForTransactionReceipt, useReadContract } from "wagmi";
 import { USDC_ADDRESS, USDC_ABI } from "@/lib/contract";
 import { TreasuryAllocateRow } from "@/components/TreasuryAllocateRow";
 
@@ -58,6 +58,15 @@ function TreasuryInner() {
   const { writeContractAsync } = useWriteContract();
   const [pendingTx, setPendingTx] = useState<`0x${string}` | undefined>();
   const { data: receipt } = useWaitForTransactionReceipt({ hash: pendingTx });
+
+  const walletAddress = wallets[0]?.address as Address | undefined;
+  const { data: walletBalance } = useReadContract({
+    address: USDC_ADDRESS,
+    abi: USDC_ABI,
+    functionName: "balanceOf",
+    args: walletAddress ? [walletAddress] : undefined,
+    query: { enabled: !!walletAddress, refetchInterval: 8000 },
+  });
 
   useEffect(() => {
     if (ready && !authenticated) router.push("/");
@@ -185,9 +194,6 @@ function TreasuryInner() {
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <span className="font-semibold text-gray-900">BYN Split Pay</span>
           <div className="flex items-center gap-3">
-            <a href="/balance" className="text-sm text-gray-400 hover:text-gray-600 transition-colors">
-              Balance
-            </a>
             <a href="/dashboard" className="text-sm text-gray-400 hover:text-gray-600 transition-colors">
               Dashboard
             </a>
@@ -248,7 +254,14 @@ function TreasuryInner() {
 
           {/* Crypto */}
           <div className="bg-white border border-gray-200 rounded-2xl p-5 space-y-3">
-            <p className="font-medium text-gray-900 text-sm">Top up with crypto</p>
+            <div className="flex items-center justify-between">
+              <p className="font-medium text-gray-900 text-sm">Top up with crypto</p>
+              {walletBalance !== undefined && (
+                <p className="text-xs text-gray-400">
+                  wallet: {parseFloat(formatUnits(walletBalance, 6)).toFixed(2)} USDC
+                </p>
+              )}
+            </div>
             <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden focus-within:border-indigo-400">
               <input
                 type="number"
