@@ -115,8 +115,12 @@ Security: ReentrancyGuard, Ownable, Pausable, SafeERC20.
 ## Invite-link flow (контрибьюторы) ✅
 Owner на дашборде («Edit Contributors» → «Invite by Link») создаёт слот роль+% без кошелька → `POST /api/invite` отдаёт `inviteToken` → ссылка `/invite/[token]`. Участник логинится через Privy и привязывает свой кошелёк (`POST /api/invite/[token]`). Owner видит подтверждение (бейдж + баннер), добавляет в список и пересчитывает % до 100, затем `replaceContributors` (on-chain). Owner НЕ видит связку личность↔адрес (адрес on-chain публичен всегда, скрыта именно личность). `DELETE /api/invite/[token]` — отзыв неклеймнутого. API: `frontend/app/api/invite/`, UI: `app/invite/[token]/page.tsx` + `components/ContributorsEditor.tsx`.
 
-## Treasury (кастодиальное пополнение) ✅ код, ⏳ требует env
-Страница `/treasury`: пополнение баланса картой (Stripe Checkout) или криптой (USDC transfer на treasury-кошелёк). **Только пополнение** — распределение из трежери в проекты ещё не сделано. Тестнет: курс 1 USD = 1 USDC захардкожен. ⚠️ Вводит кастодиальную модель (отход от non-custodial). API: `frontend/app/api/treasury/` (route=GET баланс, checkout=Stripe session, webhook=Stripe confirm idempotent, deposit-crypto=верификация Transfer on-chain по txHash). Нужны env: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_TREASURY_ADDRESS` (+ `EXECUTOR_PRIVATE_KEY` для будущего распределения). Без ключей эндпоинты отдают 503, UI не падает.
+## Treasury (кастодиальный баланс) ✅ задеплоено
+Страница `/treasury`: пополнение баланса картой (Stripe Checkout) или криптой (USDC transfer на treasury-кошелёк) + **распределение в проекты** (allocate). Баланс = sum(CONFIRMED deposits) − sum(allocations). Тестнет: курс 1 USD = 1 USDC захардкожен. ⚠️ Кастодиальная модель (отход от non-custodial).
+- **Пополнение** API: `route`=GET баланс/депозиты/аллокации, `checkout`=Stripe session, `webhook`=Stripe confirm (idempotent), `deposit-crypto`=верификация Transfer on-chain по txHash.
+- **Allocate** (`POST /api/treasury/allocate`): executor-кошелёк (`lib/executor.ts`) делает approve + depositRevenue в vault проекта, пишет `Allocation`, дебетует баланс. Проверяет достаточность баланса и on-chain фондов кошелька. UI: `components/TreasuryAllocateRow.tsx`.
+- Env (в Vercel Production ✅): `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_TREASURY_ADDRESS`, `EXECUTOR_PRIVATE_KEY`. Без ключей эндпоинты отдают 503, UI не падает.
+- ⚠️ Для allocate executor-кошелёк (`0xf89f…7A56`, см. memory) должен реально держать USDC (фаусет): card-пополнение кредитит только БД, on-chain USDC туда не поступает.
 
 ⚠️ Demo-проект (`0x2DB3dbDA6C5F5CfF3234CDBadD049D90412c1774`) принадлежит технической учётке `ownerId="system"` — он НЕ появится в списке проектов реального пользователя. Реальные проекты создаются через `/create`.
 
