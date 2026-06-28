@@ -14,8 +14,9 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  projects     Project[]
-  transactions Transaction[]
+  projects         Project[]
+  transactions     Transaction[]
+  treasuryDeposits TreasuryDeposit[]
 
   @@map("users")
 }
@@ -90,4 +91,34 @@ enum TxType {
   DEPOSIT
   PAYMENT
   DISTRIBUTION
+}
+
+// Custodial treasury balance: users top up via card (Stripe) or crypto
+// (USDC transfer to the platform treasury wallet). Balance = sum of CONFIRMED
+// amounts. Allocation out of the treasury into project vaults is a later phase.
+model TreasuryDeposit {
+  id              String          @id @default(cuid())
+  userId          String
+  source          TreasurySource
+  amount          BigInt          // USDC, 6 decimals
+  status          TreasuryStatus  @default(PENDING)
+  stripeSessionId String?         @unique
+  txHash          String?         @unique
+  createdAt       DateTime        @default(now())
+  confirmedAt     DateTime?
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("treasury_deposits")
+}
+
+enum TreasurySource {
+  CARD
+  CRYPTO
+}
+
+enum TreasuryStatus {
+  PENDING
+  CONFIRMED
+  FAILED
 }
