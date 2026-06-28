@@ -25,6 +25,14 @@ interface ProjectSummary {
   contractAddress: string;
 }
 
+interface AllocationItem {
+  id: string;
+  contractAddress: string;
+  amount: string;
+  txHash: string;
+  createdAt: string;
+}
+
 export default function TreasuryPage() {
   return (
     <Suspense
@@ -47,6 +55,7 @@ function TreasuryInner() {
 
   const [balance, setBalance] = useState<bigint>(0n);
   const [deposits, setDeposits] = useState<Deposit[]>([]);
+  const [allocations, setAllocations] = useState<AllocationItem[]>([]);
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [cardAmount, setCardAmount] = useState("");
   const [cryptoAmount, setCryptoAmount] = useState("");
@@ -85,6 +94,7 @@ function TreasuryInner() {
       const data = await res.json();
       setBalance(BigInt(data.balance ?? "0"));
       setDeposits(data.deposits ?? []);
+      setAllocations(data.allocations ?? []);
     } catch {}
   }
 
@@ -347,6 +357,46 @@ function TreasuryInner() {
                 </span>
               </div>
             ))
+          )}
+        </div>
+
+        <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+          <div className="px-4 py-3 border-b border-gray-100">
+            <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">
+              Allocations to projects
+            </p>
+          </div>
+          {allocations.length === 0 ? (
+            <p className="px-4 py-6 text-sm text-gray-400 text-center">No allocations yet.</p>
+          ) : (
+            allocations.map((a) => {
+              const project = projects.find(
+                (p) => p.contractAddress.toLowerCase() === a.contractAddress.toLowerCase()
+              );
+              return (
+                <div
+                  key={a.id}
+                  className="flex items-center justify-between px-4 py-3 border-b border-gray-50 last:border-0"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">
+                      {project?.name ?? `${a.contractAddress.slice(0, 8)}...${a.contractAddress.slice(-6)}`}
+                    </p>
+                    <a
+                      href={`https://testnet.arcscan.app/tx/${a.txHash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-indigo-500 hover:text-indigo-700 font-mono"
+                    >
+                      {a.txHash.slice(0, 10)}... ↗
+                    </a>
+                  </div>
+                  <span className="text-sm font-medium text-gray-900 whitespace-nowrap">
+                    − {parseFloat(formatUnits(BigInt(a.amount), 6)).toFixed(2)} USDC
+                  </span>
+                </div>
+              );
+            })
           )}
         </div>
       </main>
