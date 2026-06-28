@@ -60,6 +60,9 @@ export default function BalancePage() {
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <span className="font-semibold text-gray-900">BYN Split Pay</span>
           <div className="flex items-center gap-3">
+            <a href="/treasury" className="text-sm text-gray-400 hover:text-gray-600 transition-colors">
+              Treasury
+            </a>
             <a href="/dashboard" className="text-sm text-gray-400 hover:text-gray-600 transition-colors">
               ← Dashboard
             </a>

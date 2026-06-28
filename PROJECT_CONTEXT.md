@@ -108,8 +108,15 @@ Security: ReentrancyGuard, Ownable, Pausable, SafeERC20.
 ## База данных (Prisma + Supabase, применена ✅)
 - `users` — id, privyId (уникальный, реальный Privy user.id или "cli-admin"/"system" для легаси), email, wallet
 - `projects` — id, name, contractAddress (уникальный), usdcAddress, chainId, deployBlock, ownerId → users
-- `contributors` — id, projectId, wallet, percentage (basis points), role, active, totalPaid
+- `contributors` — id, projectId, wallet (nullable — pending-инвайт без кошелька), percentage (basis points), role, active, totalPaid, status (PENDING/CLAIMED), inviteToken (uniq), claimedByPrivyId (никогда не отдаётся в owner-facing API)
 - `transactions` — id, projectId, type (DEPOSIT/PAYMENT/DISTRIBUTION), amount, txHash, blockNumber, timestamp, fromAddress, toAddress, role
+- `treasury_deposits` — id, userId, source (CARD/CRYPTO), amount (USDC 6 dec), status (PENDING/CONFIRMED/FAILED), stripeSessionId (uniq), txHash (uniq), confirmedAt. Баланс трежери = сумма CONFIRMED.
+
+## Invite-link flow (контрибьюторы) ✅
+Owner на дашборде («Edit Contributors» → «Invite by Link») создаёт слот роль+% без кошелька → `POST /api/invite` отдаёт `inviteToken` → ссылка `/invite/[token]`. Участник логинится через Privy и привязывает свой кошелёк (`POST /api/invite/[token]`). Owner видит подтверждение (бейдж + баннер), добавляет в список и пересчитывает % до 100, затем `replaceContributors` (on-chain). Owner НЕ видит связку личность↔адрес (адрес on-chain публичен всегда, скрыта именно личность). `DELETE /api/invite/[token]` — отзыв неклеймнутого. API: `frontend/app/api/invite/`, UI: `app/invite/[token]/page.tsx` + `components/ContributorsEditor.tsx`.
+
+## Treasury (кастодиальное пополнение) ✅ код, ⏳ требует env
+Страница `/treasury`: пополнение баланса картой (Stripe Checkout) или криптой (USDC transfer на treasury-кошелёк). **Только пополнение** — распределение из трежери в проекты ещё не сделано. Тестнет: курс 1 USD = 1 USDC захардкожен. ⚠️ Вводит кастодиальную модель (отход от non-custodial). API: `frontend/app/api/treasury/` (route=GET баланс, checkout=Stripe session, webhook=Stripe confirm idempotent, deposit-crypto=верификация Transfer on-chain по txHash). Нужны env: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_TREASURY_ADDRESS` (+ `EXECUTOR_PRIVATE_KEY` для будущего распределения). Без ключей эндпоинты отдают 503, UI не падает.
 
 ⚠️ Demo-проект (`0x2DB3dbDA6C5F5CfF3234CDBadD049D90412c1774`) принадлежит технической учётке `ownerId="system"` — он НЕ появится в списке проектов реального пользователя. Реальные проекты создаются через `/create`.
 
