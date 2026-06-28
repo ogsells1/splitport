@@ -17,6 +17,7 @@ model User {
   projects         Project[]
   transactions     Transaction[]
   treasuryDeposits TreasuryDeposit[]
+  allocations      Allocation[]
 
   @@map("users")
 }
@@ -121,4 +122,20 @@ enum TreasuryStatus {
   PENDING
   CONFIRMED
   FAILED
+}
+
+// Allocation OUT of the custodial treasury into a project vault. Executed
+// server-side by the treasury/executor wallet (approve + depositRevenue).
+// Treasury balance = sum(CONFIRMED deposits) − sum(allocations).
+model Allocation {
+  id              String   @id @default(cuid())
+  userId          String
+  contractAddress String
+  amount          BigInt   // USDC, 6 decimals
+  txHash          String   @unique
+  createdAt       DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("allocations")
 }

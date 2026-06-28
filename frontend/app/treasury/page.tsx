@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { formatUnits, parseUnits, getAddress, type Address } from "viem";
 import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { USDC_ADDRESS, USDC_ABI } from "@/lib/contract";
+import { TreasuryAllocateRow } from "@/components/TreasuryAllocateRow";
 
 const TREASURY_ADDRESS = process.env.NEXT_PUBLIC_TREASURY_ADDRESS;
 
@@ -16,6 +17,12 @@ interface Deposit {
   status: "PENDING" | "CONFIRMED" | "FAILED";
   txHash: string | null;
   createdAt: string;
+}
+
+interface ProjectSummary {
+  id: string;
+  name: string;
+  contractAddress: string;
 }
 
 export default function TreasuryPage() {
@@ -40,6 +47,7 @@ function TreasuryInner() {
 
   const [balance, setBalance] = useState<bigint>(0n);
   const [deposits, setDeposits] = useState<Deposit[]>([]);
+  const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [cardAmount, setCardAmount] = useState("");
   const [cryptoAmount, setCryptoAmount] = useState("");
   const [cardBusy, setCardBusy] = useState(false);
@@ -76,6 +84,14 @@ function TreasuryInner() {
     loadTreasury();
     const interval = setInterval(loadTreasury, 8000);
     return () => clearInterval(interval);
+  }, [ready, authenticated, user]);
+
+  useEffect(() => {
+    if (!ready || !authenticated || !user) return;
+    fetch(`/api/projects?ownerPrivyId=${encodeURIComponent(user.id)}`)
+      .then((r) => r.json())
+      .then((d) => setProjects(d.projects ?? []))
+      .catch(() => {});
   }, [ready, authenticated, user]);
 
   // When the on-chain USDC transfer confirms, report it to the backend.
@@ -256,6 +272,36 @@ function TreasuryInner() {
               <p className="text-xs text-gray-400">Treasury address not configured.</p>
             )}
           </div>
+        </div>
+
+        <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+          <div className="px-4 py-3 border-b border-gray-100">
+            <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">
+              Allocate to a project
+            </p>
+            <p className="text-xs text-gray-400 mt-0.5">
+              Moves USDC from your treasury into a project vault (paid by the treasury wallet).
+            </p>
+          </div>
+          {projects.length === 0 ? (
+            <p className="px-4 py-6 text-sm text-gray-400 text-center">
+              No projects yet.{" "}
+              <a href="/create" className="text-indigo-600 hover:underline">
+                Create one
+              </a>
+              .
+            </p>
+          ) : (
+            projects.map((p) => (
+              <TreasuryAllocateRow
+                key={p.id}
+                name={p.name}
+                contractAddress={p.contractAddress as Address}
+                userPrivyId={user!.id}
+                onAllocated={loadTreasury}
+              />
+            ))
+          )}
         </div>
 
         <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
