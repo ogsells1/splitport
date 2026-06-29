@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { formatUnits } from "viem";
 
 interface Contributor {
   id: string;
@@ -29,6 +30,14 @@ export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboard
   const [creating, setCreating] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
 
+  // Treasury balance + distribute-from-here
+  const [treasuryBalance, setTreasuryBalance] = useState<bigint>(0n);
+  const [distributedTotal, setDistributedTotal] = useState<bigint>(0n);
+  const [distAmount, setDistAmount] = useState("");
+  const [distributing, setDistributing] = useState(false);
+  const [distError, setDistError] = useState("");
+  const [distDone, setDistDone] = useState(false);
+
   const load = useCallback(async () => {
     try {
       const res = await fetch(`/api/project?contractAddress=${address}`);
@@ -55,7 +64,53 @@ export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboard
       .catch(() => {});
   }, [ownerPrivyId, address]);
 
+  const loadTreasury = useCallback(async () => {
+    if (!ownerPrivyId) return;
+    try {
+      const res = await fetch(`/api/treasury?userPrivyId=${encodeURIComponent(ownerPrivyId)}`);
+      const data = await res.json();
+      if (res.ok) {
+        setTreasuryBalance(BigInt(data.balance ?? "0"));
+        const forThis = (data.distributions ?? [])
+          .filter((d: any) => d.contractAddress === address)
+          .reduce((s: bigint, d: any) => s + BigInt(d.total), 0n);
+        setDistributedTotal(forThis);
+      }
+    } catch {}
+  }, [ownerPrivyId, address]);
+
+  useEffect(() => {
+    loadTreasury();
+  }, [loadTreasury]);
+
   const totalPct = contributors.reduce((s, c) => s + c.percentage, 0);
+
+  async function distribute() {
+    setDistError("");
+    const amt = parseFloat(distAmount);
+    if (!amt || amt <= 0) {
+      setDistError("Enter an amount greater than 0.");
+      return;
+    }
+    setDistributing(true);
+    try {
+      const res = await fetch("/api/treasury/distribute", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ownerPrivyId, contractAddress: address, amount: amt }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Distribution failed");
+      setDistDone(true);
+      setDistAmount("");
+      await loadTreasury();
+      setTimeout(() => setDistDone(false), 2500);
+    } catch (e: any) {
+      setDistError(e.message ?? "Distribution failed");
+    } finally {
+      setDistributing(false);
+    }
+  }
 
   async function createInvite() {
     setInviteError("");
@@ -233,14 +288,57 @@ export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboard
       </div>
 
       {isOwner && contributors.length > 0 && (
-        <div className="bg-indigo-50 text-indigo-800 text-xs rounded-xl px-4 py-3">
-          Go to{" "}
-          <a href="/treasury" className="underline font-medium">
-            Treasury
-          </a>{" "}
-          to distribute funds by %. You can distribute even before everyone has joined — a share is
-          reserved for each pending contributor and becomes claimable as soon as they accept their
-          invite.
+        <div className="bg-white border border-gray-200 rounded-2xl p-5 space-y-4">
+          <div className="flex items-end justify-between gap-3">
+            <div>
+              <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Treasury balance</p>
+              <p className="text-2xl font-semibold text-gray-900">
+                {parseFloat(formatUnits(treasuryBalance, 6)).toFixed(2)}
+                <span className="text-sm text-gray-400 ml-1.5">USDC</span>
+              </p>
+            </div>
+            {distributedTotal > 0n && (
+              <p className="text-xs text-gray-400 mb-1">
+                distributed to this project:{" "}
+                <span className="text-gray-600 font-medium">
+                  {parseFloat(formatUnits(distributedTotal, 6)).toFixed(2)} USDC
+                </span>
+              </p>
+            )}
+          </div>
+
+          <div>
+            <div className="flex items-center gap-2">
+              <div className="flex-1 flex items-center border border-gray-200 rounded-lg overflow-hidden focus-within:border-indigo-400 transition-colors">
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={distAmount}
+                  onChange={(e) => setDistAmount(e.target.value)}
+                  className="flex-1 px-3 py-2.5 text-sm text-gray-900 outline-none"
+                />
+                <span className="px-2 text-xs text-gray-400">USDC</span>
+              </div>
+              <button
+                onClick={distribute}
+                disabled={distributing || distDone || treasuryBalance === 0n}
+                className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap"
+              >
+                {distributing ? "Distributing..." : distDone ? "✓ Distributed" : "Distribute"}
+              </button>
+            </div>
+            <p className="text-xs text-gray-400 mt-2">
+              Splits the amount across contributors by their %. Pending contributors' shares are
+              reserved until they accept their invite. Need funds?{" "}
+              <a href="/treasury" className="text-indigo-600 hover:underline">
+                Top up treasury
+              </a>
+              .
+            </p>
+            {distError && <p className="text-xs text-red-500 mt-1.5">{distError}</p>}
+          </div>
         </div>
       )}
     </div>
