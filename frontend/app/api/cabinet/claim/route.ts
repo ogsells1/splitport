@@ -51,8 +51,11 @@ export async function POST(request: Request) {
         account,
       });
       const gasPrice = await publicClient.getGasPrice();
-      // Pad 20% so the deducted fee comfortably covers actual gas.
-      fee = (gas * gasPrice * 12n) / 10n;
+      // Gas is paid in the 18-decimal native token; the payout is 6-decimal USDC.
+      // Convert native wei → USDC units (divide by 10^(18-6)) and pad 20% so the
+      // deducted fee comfortably covers actual gas.
+      const feeWei = (gas * gasPrice * 12n) / 10n;
+      fee = feeWei / 10n ** 12n;
     } catch {
       return NextResponse.json(
         { error: "Could not estimate the transfer fee. Try again shortly." },
