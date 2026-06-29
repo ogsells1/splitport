@@ -3,6 +3,15 @@
 import { useEffect, useState } from "react";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { formatUnits, type Address } from "viem";
+import { USDC_ADDRESS } from "@/lib/contract";
+
+const ARC_CHAIN_PARAMS = {
+  chainId: "0x4cf4d2", // 5042002
+  chainName: "Arc Testnet",
+  nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 18 },
+  rpcUrls: ["https://rpc.testnet.arc.network"],
+  blockExplorerUrls: ["https://testnet.arcscan.app"],
+};
 
 interface PayoutItem {
   id: string;
@@ -25,8 +34,36 @@ export default function CabinetPage() {
   const [claiming, setClaiming] = useState(false);
   const [error, setError] = useState("");
   const [banner, setBanner] = useState("");
+  const [walletMsg, setWalletMsg] = useState("");
 
   const walletAddress = wallets[0]?.address as Address | undefined;
+
+  async function addArcNetwork() {
+    setWalletMsg("");
+    try {
+      const provider: any = await wallets[0]?.getEthereumProvider();
+      if (!provider) throw new Error("No wallet provider");
+      await provider.request({ method: "wallet_addEthereumChain", params: [ARC_CHAIN_PARAMS] });
+      setWalletMsg("Arc Testnet added to your wallet ✓");
+    } catch (e: any) {
+      setWalletMsg(e?.message ?? "Your wallet didn't add the network — you can add it manually.");
+    }
+  }
+
+  async function addUsdcToken() {
+    setWalletMsg("");
+    try {
+      const provider: any = await wallets[0]?.getEthereumProvider();
+      if (!provider) throw new Error("No wallet provider");
+      await provider.request({
+        method: "wallet_watchAsset",
+        params: { type: "ERC20", options: { address: USDC_ADDRESS, symbol: "USDC", decimals: 6 } },
+      });
+      setWalletMsg("USDC added to your wallet ✓");
+    } catch (e: any) {
+      setWalletMsg(e?.message ?? "Your wallet didn't add the token — you can add it manually.");
+    }
+  }
 
   async function loadCabinet() {
     if (!walletAddress) return;
@@ -165,6 +202,35 @@ export default function CabinetPage() {
               ? "Nothing to claim yet"
               : `Claim ${claimableFormatted} USDC`}
           </button>
+        </div>
+
+        <div className="bg-white border border-gray-200 rounded-2xl p-5 space-y-3">
+          <div>
+            <p className="text-sm font-medium text-gray-900">See your money in your wallet</p>
+            <p className="text-sm text-gray-500 mt-0.5">
+              Add the Arc Testnet network and the USDC token so your balance shows up in Trust,
+              MetaMask, or your wallet app.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={addArcNetwork}
+              className="py-2.5 border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-xl transition-colors"
+            >
+              Add Arc network
+            </button>
+            <button
+              onClick={addUsdcToken}
+              className="py-2.5 border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-xl transition-colors"
+            >
+              Add USDC token
+            </button>
+          </div>
+          {walletMsg && <p className="text-xs text-gray-500">{walletMsg}</p>}
+          <p className="text-xs text-gray-400">
+            Using the built-in wallet? Your balance is always shown here — adding to an app is only
+            needed for external wallets.
+          </p>
         </div>
 
         <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
