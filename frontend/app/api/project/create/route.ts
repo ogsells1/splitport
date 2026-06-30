@@ -7,7 +7,7 @@
 
 import { NextResponse } from "next/server";
 import { randomBytes } from "crypto";
-import { isAddress } from "viem";
+import { isAddress, parseUnits } from "viem";
 import { prisma } from "@/lib/prisma";
 
 const DEFAULT_USDC_ADDRESS = "0x3600000000000000000000000000000000000000";
@@ -15,17 +15,19 @@ const DEFAULT_CHAIN_ID = 5042002;
 
 interface RowInput {
   role: string;
-  percentage: number; // basis points
+  percentage?: number; // basis points (PERCENTAGE mode)
+  amount?: number; // fixed USDC per payout (FIXED mode)
   wallet?: string | null;
 }
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { ownerPrivyId, name, usdcAddress, contributors } = body as {
+    const { ownerPrivyId, name, usdcAddress, splitMode: rawMode, contributors } = body as {
       ownerPrivyId?: string;
       name?: string;
       usdcAddress?: string;
+      splitMode?: string;
       contributors?: RowInput[];
     };
 
@@ -33,12 +35,25 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    const totalBps = contributors.reduce((s, c) => s + (c.percentage || 0), 0);
-    if (totalBps !== 10000) {
-      return NextResponse.json(
-        { error: "Contributor percentages must sum to 100%." },
-        { status: 400 }
-      );
+    const splitMode = rawMode === "FIXED" ? "FIXED" : "PERCENTAGE";
+
+    if (splitMode === "PERCENTAGE") {
+      const totalBps = contributors.reduce((s, c) => s + (c.percentage || 0), 0);
+      if (totalBps !== 10000) {
+        return NextResponse.json(
+          { error: "Contributor percentages must sum to 100%." },
+          { status: 400 }
+        );
+      }
+    } else {
+      for (const c of contributors) {
+        if (!(typeof c.amount === "number" && c.amount > 0)) {
+          return NextResponse.json(
+            { error: "Every contributor needs a fixed amount greater than 0." },
+            { status: 400 }
+          );
+        }
+      }
     }
     for (const c of contributors) {
       if (!c.role?.trim()) {
@@ -63,6 +78,7 @@ export async function POST(request: Request) {
         contractAddress,
         usdcAddress: usdcAddress ?? DEFAULT_USDC_ADDRESS,
         chainId: DEFAULT_CHAIN_ID,
+        splitMode,
         owner: {
           connectOrCreate: {
             where: { privyId: ownerPrivyId },
@@ -72,7 +88,20 @@ export async function POST(request: Request) {
       },
     });
 
-    const invites: { role: string; percentage: number; inviteToken: string; inviteUrl: string }[] = [];
+    // Per-contributor share fields by mode. FIXED stores fixedAmount (percentage 0);
+    // PERCENTAGE stores basis points.
+    const shareFields = (c: RowInput) =>
+      splitMode === "FIXED"
+        ? { percentage: 0, fixedAmount: parseUnits(String(c.amount), 6) }
+        : { percentage: c.percentage ?? 0, fixedAmount: null };
+
+    const invites: {
+      role: string;
+      percentage: number;
+      amount: number | null;
+      inviteToken: string;
+      inviteUrl: string;
+    }[] = [];
 
     await prisma.$transaction(
       contributors.map((c) => {
@@ -81,7 +110,7 @@ export async function POST(request: Request) {
             data: {
               projectId: project.id,
               wallet: c.wallet!.toLowerCase(),
-              percentage: c.percentage,
+              ...shareFields(c),
               role: c.role.trim(),
               status: "CLAIMED",
             },
@@ -90,7 +119,8 @@ export async function POST(request: Request) {
         const inviteToken = randomBytes(24).toString("base64url");
         invites.push({
           role: c.role.trim(),
-          percentage: c.percentage,
+          percentage: c.percentage ?? 0,
+          amount: splitMode === "FIXED" ? c.amount ?? null : null,
           inviteToken,
           inviteUrl: `/invite/${inviteToken}`,
         });
@@ -98,7 +128,7 @@ export async function POST(request: Request) {
           data: {
             projectId: project.id,
             wallet: null,
-            percentage: c.percentage,
+            ...shareFields(c),
             role: c.role.trim(),
             status: "PENDING",
             inviteToken,
@@ -110,6 +140,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       projectId: project.id,
       contractAddress, // synthetic db_ id used for routing
+      splitMode,
       invites,
     });
   } catch (error: any) {

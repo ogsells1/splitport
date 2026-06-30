@@ -36,11 +36,13 @@ export async function GET(request: Request) {
       name: project.name,
       contractAddress: project.contractAddress,
       chainId: project.chainId,
+      splitMode: project.splitMode,
       createdAt: project.createdAt,
       contributors: project.contributors.map((c: typeof project.contributors[number]) => ({
         id: c.id,
         wallet: c.wallet,
         percentage: c.percentage,
+        fixedAmount: c.fixedAmount != null ? c.fixedAmount.toString() : null,
         role: c.role,
         totalPaid: c.totalPaid.toString(),
         status: c.status,

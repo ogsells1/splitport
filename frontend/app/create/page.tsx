@@ -6,16 +6,18 @@ import { useRouter } from "next/navigation";
 import { isAddress } from "viem";
 
 type Mode = "wallet" | "invite";
-type Row = { mode: Mode; wallet: string; percentage: string; role: string };
+type SplitMode = "PERCENTAGE" | "FIXED";
+type Row = { mode: Mode; wallet: string; percentage: string; amount: string; role: string };
 
-type CreatedInvite = { role: string; percentage: number; inviteUrl: string };
+type CreatedInvite = { role: string; percentage: number; amount: number | null; inviteUrl: string };
 
 export default function CreateProjectPage() {
   const { ready, authenticated, user, logout } = usePrivy();
   const router = useRouter();
 
   const [name, setName] = useState("");
-  const [rows, setRows] = useState<Row[]>([{ mode: "invite", wallet: "", percentage: "", role: "" }]);
+  const [splitMode, setSplitMode] = useState<SplitMode>("PERCENTAGE");
+  const [rows, setRows] = useState<Row[]>([{ mode: "invite", wallet: "", percentage: "", amount: "", role: "" }]);
   const [busy, setBusy] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -35,15 +37,20 @@ export default function CreateProjectPage() {
     );
   }
 
+  const isFixed = splitMode === "FIXED";
   const totalPct = rows.reduce((s, r) => s + (parseFloat(r.percentage) || 0), 0);
+  const fixedSum = rows.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
   const walletRows = rows.filter((r) => r.mode === "wallet");
   const validWallets = walletRows.every((r) => isAddress(r.wallet));
   const walletAddrs = walletRows.map((r) => r.wallet.toLowerCase());
   const noDuplicates = new Set(walletAddrs).size === walletAddrs.length;
+  const sharesValid = isFixed
+    ? rows.every((r) => (parseFloat(r.amount) || 0) > 0)
+    : Math.round(totalPct * 100) === 10000;
   const canSubmit =
     name.trim().length > 0 &&
     rows.length > 0 &&
-    Math.round(totalPct * 100) === 10000 &&
+    sharesValid &&
     validWallets &&
     noDuplicates &&
     rows.every((r) => r.role.trim().length > 0);
@@ -55,7 +62,7 @@ export default function CreateProjectPage() {
     setRows((prev) => prev.map((r, idx) => (idx === i ? { ...r, mode, wallet: mode === "invite" ? "" : r.wallet } : r)));
   }
   function addRow() {
-    setRows((prev) => [...prev, { mode: "invite", wallet: "", percentage: "", role: "" }]);
+    setRows((prev) => [...prev, { mode: "invite", wallet: "", percentage: "", amount: "", role: "" }]);
   }
   function removeRow(i: number) {
     setRows((prev) => prev.filter((_, idx) => idx !== i));
@@ -72,9 +79,11 @@ export default function CreateProjectPage() {
         body: JSON.stringify({
           ownerPrivyId: user!.id,
           name: name.trim(),
+          splitMode,
           contributors: rows.map((r) => ({
             role: r.role.trim(),
-            percentage: Math.round(parseFloat(r.percentage) * 100),
+            percentage: isFixed ? 0 : Math.round(parseFloat(r.percentage) * 100),
+            amount: isFixed ? parseFloat(r.amount) : undefined,
             wallet: r.mode === "wallet" ? r.wallet : null,
           })),
         }),
@@ -118,7 +127,10 @@ export default function CreateProjectPage() {
                 return (
                   <div key={i} className="px-4 py-3 border-b border-gray-100 last:border-0 space-y-1.5">
                     <p className="text-sm font-medium text-gray-900">
-                      {inv.role} · {(inv.percentage / 100).toFixed(2)}%
+                      {inv.role} ·{" "}
+                      {inv.amount != null
+                        ? `${inv.amount.toFixed(2)} USDC`
+                        : `${(inv.percentage / 100).toFixed(2)}%`}
                     </p>
                     <div className="flex items-center gap-2">
                       <input
@@ -194,6 +206,41 @@ export default function CreateProjectPage() {
           />
         </div>
 
+        <div className="bg-white border border-gray-200 rounded-2xl p-5">
+          <p className="text-sm font-medium text-gray-700 mb-2">How to split payouts</p>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setSplitMode("PERCENTAGE")}
+              className={`text-left p-3 rounded-xl border transition-colors ${
+                !isFixed ? "border-indigo-500 bg-indigo-50" : "border-gray-200 hover:border-gray-300"
+              }`}
+            >
+              <p className={`text-sm font-medium ${!isFixed ? "text-indigo-700" : "text-gray-700"}`}>
+                By percentage
+              </p>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Split each payout by % (shares sum to 100%).
+              </p>
+            </button>
+            <button
+              type="button"
+              onClick={() => setSplitMode("FIXED")}
+              className={`text-left p-3 rounded-xl border transition-colors ${
+                isFixed ? "border-indigo-500 bg-indigo-50" : "border-gray-200 hover:border-gray-300"
+              }`}
+            >
+              <p className={`text-sm font-medium ${isFixed ? "text-indigo-700" : "text-gray-700"}`}>
+                Fixed amount
+              </p>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Each participant gets a fixed USDC amount.
+              </p>
+            </button>
+          </div>
+          <p className="text-xs text-gray-400 mt-2">The mode is set now and can&apos;t be changed later.</p>
+        </div>
+
         <div className="bg-white border border-gray-200 rounded-2xl p-5 space-y-4">
           <p className="text-sm font-medium text-gray-700">Contributors</p>
 
@@ -208,19 +255,34 @@ export default function CreateProjectPage() {
                     onChange={(e) => updateRow(i, "role", e.target.value)}
                     className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-indigo-400 transition-colors"
                   />
-                  <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden focus-within:border-indigo-400">
-                    <input
-                      type="number"
-                      min="0"
-                      max="100"
-                      step="0.01"
-                      placeholder="0"
-                      value={row.percentage}
-                      onChange={(e) => updateRow(i, "percentage", e.target.value)}
-                      className="w-16 px-2 py-2 text-sm text-right outline-none"
-                    />
-                    <span className="px-1.5 text-xs text-gray-400">%</span>
-                  </div>
+                  {isFixed ? (
+                    <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden focus-within:border-indigo-400">
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="0.00"
+                        value={row.amount}
+                        onChange={(e) => updateRow(i, "amount", e.target.value)}
+                        className="w-20 px-2 py-2 text-sm text-right outline-none"
+                      />
+                      <span className="px-1.5 text-xs text-gray-400">USDC</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden focus-within:border-indigo-400">
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.01"
+                        placeholder="0"
+                        value={row.percentage}
+                        onChange={(e) => updateRow(i, "percentage", e.target.value)}
+                        className="w-16 px-2 py-2 text-sm text-right outline-none"
+                      />
+                      <span className="px-1.5 text-xs text-gray-400">%</span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-1.5">
@@ -276,16 +338,23 @@ export default function CreateProjectPage() {
             + Add Contributor
           </button>
 
-          <div
-            className={`flex items-center justify-between text-sm px-3 py-2 rounded-lg ${
-              Math.round(totalPct * 100) === 10000
-                ? "bg-emerald-50 text-emerald-700"
-                : "bg-amber-50 text-amber-700"
-            }`}
-          >
-            <span>Total</span>
-            <span className="font-semibold">{totalPct.toFixed(2)}% / 100%</span>
-          </div>
+          {isFixed ? (
+            <div className="flex items-center justify-between text-sm px-3 py-2 rounded-lg bg-gray-50 text-gray-700">
+              <span>Total per payout</span>
+              <span className="font-semibold">{fixedSum.toFixed(2)} USDC</span>
+            </div>
+          ) : (
+            <div
+              className={`flex items-center justify-between text-sm px-3 py-2 rounded-lg ${
+                Math.round(totalPct * 100) === 10000
+                  ? "bg-emerald-50 text-emerald-700"
+                  : "bg-amber-50 text-amber-700"
+              }`}
+            >
+              <span>Total</span>
+              <span className="font-semibold">{totalPct.toFixed(2)}% / 100%</span>
+            </div>
+          )}
 
           {!noDuplicates && (
             <p className="text-xs text-red-500">Duplicate wallet addresses are not allowed.</p>

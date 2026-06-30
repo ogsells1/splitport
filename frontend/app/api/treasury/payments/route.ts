@@ -13,13 +13,17 @@ import { prisma } from "@/lib/prisma";
 async function ownedProject(contractAddress: string, ownerPrivyId: string) {
   const project = await prisma.project.findUnique({
     where: { contractAddress },
-    include: { owner: true },
+    include: { owner: true, contributors: { where: { active: true } } },
   });
   if (!project) return { error: "Project not found", status: 404 as const };
   if (project.owner.privyId !== ownerPrivyId) {
     return { error: "Forbidden", status: 403 as const };
   }
   return { project };
+}
+
+function fixedTotal(contributors: { fixedAmount: bigint | null }[]): bigint {
+  return contributors.reduce((s, c) => s + (c.fixedAmount ?? 0n), 0n);
 }
 
 function serialize(p: {
@@ -79,10 +83,6 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    const amountNum = Number(amount);
-    if (!Number.isFinite(amountNum) || amountNum <= 0) {
-      return NextResponse.json({ error: "amount must be greater than 0" }, { status: 400 });
-    }
     if (!runAt) {
       return NextResponse.json({ error: "A payout date is required" }, { status: 400 });
     }
@@ -96,10 +96,28 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: owned.error }, { status: owned.status });
     }
 
+    // FIXED: amount is derived from fixed amounts (runtime uses them too).
+    let amountUsdc: bigint;
+    if (owned.project.splitMode === "FIXED") {
+      amountUsdc = fixedTotal(owned.project.contributors);
+      if (amountUsdc <= 0n) {
+        return NextResponse.json(
+          { error: "Set fixed amounts for contributors first." },
+          { status: 400 }
+        );
+      }
+    } else {
+      const amountNum = Number(amount);
+      if (!Number.isFinite(amountNum) || amountNum <= 0) {
+        return NextResponse.json({ error: "amount must be greater than 0" }, { status: 400 });
+      }
+      amountUsdc = parseUnits(String(amountNum), 6);
+    }
+
     const payment = await prisma.scheduledPayout.create({
       data: {
         projectId: owned.project.id,
-        amount: parseUnits(String(amountNum), 6),
+        amount: amountUsdc,
         runAt: when,
       },
     });

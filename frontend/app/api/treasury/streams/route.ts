@@ -11,6 +11,7 @@ import { parseUnits, formatUnits } from "viem";
 import { prisma } from "@/lib/prisma";
 import { getAvailableBalance } from "@/lib/treasuryBalance";
 import { accruedAmount } from "@/lib/stream";
+import { computeShares, DistributionError } from "@/lib/distribute";
 
 async function ownedProject(contractAddress: string, ownerPrivyId: string) {
   const project = await prisma.project.findUnique({
@@ -85,9 +86,15 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    const totalNum = Number(total);
-    if (!Number.isFinite(totalNum) || totalNum <= 0) {
-      return NextResponse.json({ error: "total must be greater than 0" }, { status: 400 });
+    // PERCENTAGE projects stream a chosen total; FIXED streams the sum of each
+    // contributor's fixed amount over the window (total is derived, not required).
+    let totalUsdcInput: bigint | undefined;
+    if (total != null && total !== "") {
+      const totalNum = Number(total);
+      if (!Number.isFinite(totalNum) || totalNum <= 0) {
+        return NextResponse.json({ error: "total must be greater than 0" }, { status: 400 });
+      }
+      totalUsdcInput = parseUnits(String(totalNum), 6);
     }
     const start = startAt ? new Date(startAt) : new Date();
     const end = new Date(endAt);
@@ -104,34 +111,27 @@ export async function POST(request: Request) {
     }
     const { project } = owned;
 
-    const contributors = project.contributors;
-    if (contributors.length === 0) {
-      return NextResponse.json({ error: "Project has no contributors" }, { status: 400 });
-    }
-    const totalBps = contributors.reduce((s, c) => s + c.percentage, 0);
-    if (totalBps !== 10000) {
-      return NextResponse.json(
-        { error: `Contributor percentages must sum to 100% (got ${totalBps / 100}%).` },
-        { status: 400 }
-      );
+    let shares, committed: bigint;
+    try {
+      const computed = computeShares(project.splitMode, project.contributors, {
+        amountUsdc: totalUsdcInput,
+      });
+      shares = computed.shares;
+      committed = computed.total;
+    } catch (e: any) {
+      if (e instanceof DistributionError) {
+        return NextResponse.json({ error: e.message }, { status: e.status });
+      }
+      throw e;
     }
 
-    const totalUsdc = parseUnits(String(totalNum), 6);
     const available = await getAvailableBalance(project.ownerId);
-    if (totalUsdc > available) {
+    if (committed > available) {
       return NextResponse.json(
         { error: `Insufficient treasury balance. Available: ${formatUnits(available, 6)} USDC.` },
         { status: 400 }
       );
     }
-
-    // Split by basis points; dust (remainder) stays in the treasury.
-    const shares = contributors.map((c) => ({
-      contributorId: c.id,
-      wallet: c.wallet ? c.wallet.toLowerCase() : null,
-      amount: (totalUsdc * BigInt(c.percentage)) / 10000n,
-    }));
-    const committed = shares.reduce((s, x) => s + x.amount, 0n);
 
     const stream = await prisma.$transaction(async (tx) => {
       const created = await tx.payoutStream.create({

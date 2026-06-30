@@ -1,9 +1,11 @@
 // frontend/lib/distribute.ts
-// Shared custodial-distribution logic used by both the manual distribute route
-// (POST /api/treasury/distribute) and the scheduled auto-payout cron
-// (GET /api/treasury/schedule/run). Splits an amount from the project owner's
-// treasury across the project's active contributors by basis points, creating
-// one claimable Payout per contributor. No on-chain tx.
+// Shared custodial-distribution logic used by the manual distribute route, the
+// scheduled auto-payout cron, and (via computeShares) streams. Creates one
+// claimable Payout per contributor. No on-chain tx.
+//
+// Two split modes:
+//   PERCENTAGE — split an input amount across all contributors by basis points.
+//   FIXED      — pay each (selected) contributor their own fixed amount.
 
 import { formatUnits } from "viem";
 import { prisma } from "@/lib/prisma";
@@ -23,21 +25,88 @@ export interface DistributionResult {
   payouts: number;
 }
 
+export interface ShareLine {
+  contributorId: string;
+  wallet: string | null;
+  amount: bigint;
+}
+
+interface ContributorLite {
+  id: string;
+  wallet: string | null;
+  percentage: number;
+  fixedAmount: bigint | null;
+}
+
 /**
- * Distribute `amountUsdc` (6-decimal USDC units) from the treasury across a
- * project's contributors. If `ownerPrivyId` is provided, ownership is enforced
- * (manual path); pass it omitted for system-initiated runs (cron).
+ * Compute per-contributor payout amounts for a project.
+ *   PERCENTAGE: needs `amountUsdc`; all contributors share it by basis points
+ *               (must sum to 100%); dust remainder stays in the treasury.
+ *   FIXED:      each contributor gets their own `fixedAmount`. `contributorIds`
+ *               optionally restricts the payout to a chosen subset; omit for all.
+ */
+export function computeShares(
+  splitMode: "PERCENTAGE" | "FIXED",
+  contributors: ContributorLite[],
+  opts: { amountUsdc?: bigint; contributorIds?: string[] } = {}
+): { shares: ShareLine[]; total: bigint } {
+  if (contributors.length === 0) {
+    throw new DistributionError("Project has no contributors");
+  }
+
+  if (splitMode === "FIXED") {
+    let selected = contributors;
+    if (opts.contributorIds && opts.contributorIds.length > 0) {
+      const set = new Set(opts.contributorIds);
+      selected = contributors.filter((c) => set.has(c.id));
+      if (selected.length === 0) {
+        throw new DistributionError("No matching contributors selected.");
+      }
+    }
+    const shares = selected.map((c) => {
+      if (c.fixedAmount == null || c.fixedAmount <= 0n) {
+        throw new DistributionError("Every selected contributor needs a fixed amount > 0.");
+      }
+      return {
+        contributorId: c.id,
+        wallet: c.wallet ? c.wallet.toLowerCase() : null,
+        amount: c.fixedAmount,
+      };
+    });
+    return { shares, total: shares.reduce((s, x) => s + x.amount, 0n) };
+  }
+
+  // PERCENTAGE
+  if (opts.amountUsdc == null || opts.amountUsdc <= 0n) {
+    throw new DistributionError("Amount must be greater than 0.");
+  }
+  const totalBps = contributors.reduce((s, c) => s + c.percentage, 0);
+  if (totalBps !== 10000) {
+    throw new DistributionError(
+      `Contributor percentages must sum to 100% (got ${totalBps / 100}%).`
+    );
+  }
+  const shares = contributors.map((c) => ({
+    contributorId: c.id,
+    wallet: c.wallet ? c.wallet.toLowerCase() : null,
+    amount: (opts.amountUsdc! * BigInt(c.percentage)) / 10000n,
+  }));
+  return { shares, total: shares.reduce((s, x) => s + x.amount, 0n) };
+}
+
+/**
+ * Distribute from the treasury across a project's contributors. PERCENTAGE needs
+ * `amountUsdc`; FIXED ignores it and pays fixed amounts (optionally to the subset
+ * named by `contributorIds`). If `ownerPrivyId` is provided ownership is enforced
+ * (manual path); omit it for system-initiated runs (cron).
  */
 export async function runDistribution(opts: {
   contractAddress: string;
-  amountUsdc: bigint;
+  amountUsdc?: bigint;
+  contributorIds?: string[];
   ownerPrivyId?: string;
 }): Promise<DistributionResult> {
-  const { contractAddress, amountUsdc, ownerPrivyId } = opts;
-
-  if (amountUsdc <= 0n) {
-    throw new DistributionError("Amount must be greater than 0.");
-  }
+  const { contractAddress, amountUsdc, contributorIds, ownerPrivyId } = opts;
 
   const project = await prisma.project.findUnique({
     where: { contractAddress },
@@ -50,41 +119,25 @@ export async function runDistribution(opts: {
     throw new DistributionError("Forbidden", 403);
   }
 
-  const contributors = project.contributors;
-  if (contributors.length === 0) {
-    throw new DistributionError("Project has no contributors");
-  }
   // Distribution is allowed even before invites are claimed: a contributor who
   // hasn't linked a wallet yet gets a reserved payout (wallet = null) that
   // becomes claimable once they accept their invite.
-  const totalBps = contributors.reduce((s, c) => s + c.percentage, 0);
-  if (totalBps !== 10000) {
-    throw new DistributionError(
-      `Contributor percentages must sum to 100% (got ${totalBps / 100}%).`
-    );
-  }
+  const { shares, total } = computeShares(project.splitMode, project.contributors, {
+    amountUsdc,
+    contributorIds,
+  });
 
   // Treasury balance: confirmed deposits − lump-sum distributions − stream buffers.
-  const owner = project.owner;
-  const available = await getAvailableBalance(owner.id);
-
-  if (amountUsdc > available) {
+  const available = await getAvailableBalance(project.owner.id);
+  if (total > available) {
     throw new DistributionError(
       `Insufficient treasury balance. Available: ${formatUnits(available, 6)} USDC.`
     );
   }
 
-  // Split by basis points. Remainder (dust) stays in the treasury.
-  const shares = contributors.map((c) => ({
-    contributorId: c.id,
-    wallet: c.wallet ? c.wallet.toLowerCase() : null,
-    amount: (amountUsdc * BigInt(c.percentage)) / 10000n,
-  }));
-  const distributedSum = shares.reduce((s, x) => s + x.amount, 0n);
-
   const result = await prisma.$transaction(async (tx) => {
     const distribution = await tx.distribution.create({
-      data: { projectId: project.id, total: distributedSum },
+      data: { projectId: project.id, total },
     });
     await tx.payout.createMany({
       data: shares.map((s) => ({
@@ -98,9 +151,5 @@ export async function runDistribution(opts: {
     return distribution;
   });
 
-  return {
-    distributionId: result.id,
-    distributed: distributedSum,
-    payouts: shares.length,
-  };
+  return { distributionId: result.id, distributed: total, payouts: shares.length };
 }

@@ -21,6 +21,8 @@ interface Schedule {
 interface AutoPayoutRowProps {
   address: string;
   ownerPrivyId: string;
+  splitMode?: "PERCENTAGE" | "FIXED";
+  fixedTotal?: string; // USDC 6 dec, sum of fixed amounts (FIXED mode)
 }
 
 function fmtDate(iso: string) {
@@ -36,7 +38,8 @@ function toDateInput(iso: string) {
   return new Date(iso).toISOString().slice(0, 10);
 }
 
-export function AutoPayoutRow({ address, ownerPrivyId }: AutoPayoutRowProps) {
+export function AutoPayoutRow({ address, ownerPrivyId, splitMode = "PERCENTAGE", fixedTotal = "0" }: AutoPayoutRowProps) {
+  const isFixed = splitMode === "FIXED";
   const [schedule, setSchedule] = useState<Schedule | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
@@ -81,10 +84,14 @@ export function AutoPayoutRow({ address, ownerPrivyId }: AutoPayoutRowProps) {
 
   async function save() {
     setError("");
-    const amt = parseFloat(amount);
-    if (!amt || amt <= 0) {
-      setError("Enter an amount greater than 0.");
-      return;
+    // FIXED projects derive the per-run amount from contributors' fixed amounts.
+    let amt: number | undefined;
+    if (!isFixed) {
+      amt = parseFloat(amount);
+      if (!amt || amt <= 0) {
+        setError("Enter an amount greater than 0.");
+        return;
+      }
     }
     if (frequency === "CUSTOM" && !date) {
       setError("Pick the next payout date.");
@@ -212,21 +219,31 @@ export function AutoPayoutRow({ address, ownerPrivyId }: AutoPayoutRowProps) {
             </div>
           </div>
 
-          <div>
-            <label className="text-xs text-gray-400 mb-1 block">Amount per payout</label>
-            <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden focus-within:border-indigo-400">
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                placeholder="0.00"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                className="flex-1 px-3 py-2.5 text-sm text-gray-900 outline-none"
-              />
-              <span className="px-2 text-xs text-gray-400">USDC</span>
+          {isFixed ? (
+            <div className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2">
+              Each run pays every participant their fixed amount —{" "}
+              <span className="font-medium text-gray-700">
+                {parseFloat(formatUnits(BigInt(fixedTotal), 6)).toFixed(2)} USDC
+              </span>{" "}
+              per payout.
             </div>
-          </div>
+          ) : (
+            <div>
+              <label className="text-xs text-gray-400 mb-1 block">Amount per payout</label>
+              <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden focus-within:border-indigo-400">
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  className="flex-1 px-3 py-2.5 text-sm text-gray-900 outline-none"
+                />
+                <span className="px-2 text-xs text-gray-400">USDC</span>
+              </div>
+            </div>
+          )}
 
           <div>
             <label className="text-xs text-gray-400 mb-1 block">
