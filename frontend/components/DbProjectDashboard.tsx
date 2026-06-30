@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { formatUnits } from "viem";
+import { formatUnits, isAddress } from "viem";
 import { AutoPayoutRow } from "./AutoPayoutRow";
 import { ScheduledPayoutsRow } from "./ScheduledPayoutsRow";
 import { StreamRow } from "./StreamRow";
@@ -35,9 +35,11 @@ export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboard
   const [loading, setLoading] = useState(true);
 
   const [showInvite, setShowInvite] = useState(false);
+  const [addMode, setAddMode] = useState<"invite" | "wallet">("invite");
   const [inviteRole, setInviteRole] = useState("");
   const [invitePct, setInvitePct] = useState("");
   const [inviteAmount, setInviteAmount] = useState("");
+  const [inviteWallet, setInviteWallet] = useState("");
   const [inviteError, setInviteError] = useState("");
   const [creating, setCreating] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
@@ -191,6 +193,13 @@ export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboard
       }
       body.percentage = Math.round(pct * 100);
     }
+    if (addMode === "wallet") {
+      if (!isAddress(inviteWallet)) {
+        setInviteError("Enter a valid wallet address.");
+        return;
+      }
+      body.wallet = inviteWallet.trim();
+    }
     setCreating(true);
     try {
       const res = await fetch("/api/invite", {
@@ -199,14 +208,15 @@ export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboard
         body: JSON.stringify(body),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Failed to create invite");
+      if (!res.ok) throw new Error(data.error ?? "Failed to add contributor");
       setInviteRole("");
       setInvitePct("");
       setInviteAmount("");
+      setInviteWallet("");
       setShowInvite(false);
       await load();
     } catch (e: any) {
-      setInviteError(e.message ?? "Failed to create invite");
+      setInviteError(e.message ?? "Failed to add contributor");
     } finally {
       setCreating(false);
     }
@@ -365,6 +375,22 @@ export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboard
           <div className="px-4 py-3 border-t border-gray-100">
             {showInvite ? (
               <div className="space-y-2">
+                <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs w-max">
+                  <button
+                    type="button"
+                    onClick={() => setAddMode("invite")}
+                    className={`px-2.5 py-1.5 transition-colors ${addMode === "invite" ? "bg-indigo-600 text-white" : "bg-white text-gray-500 hover:bg-gray-50"}`}
+                  >
+                    Invite link
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAddMode("wallet")}
+                    className={`px-2.5 py-1.5 transition-colors ${addMode === "wallet" ? "bg-indigo-600 text-white" : "bg-white text-gray-500 hover:bg-gray-50"}`}
+                  >
+                    Wallet
+                  </button>
+                </div>
                 <div className="flex gap-1.5">
                   <input
                     type="text"
@@ -404,6 +430,19 @@ export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboard
                     )}
                   </div>
                 </div>
+                {addMode === "wallet" && (
+                  <input
+                    type="text"
+                    placeholder="0x... wallet address"
+                    value={inviteWallet}
+                    onChange={(e) => setInviteWallet(e.target.value)}
+                    className={`w-full px-3 py-1.5 text-xs font-mono border rounded-lg outline-none transition-colors ${
+                      inviteWallet && !isAddress(inviteWallet)
+                        ? "border-red-300 focus:border-red-400"
+                        : "border-gray-200 focus:border-indigo-400"
+                    }`}
+                  />
+                )}
                 {inviteError && <p className="text-xs text-red-500">{inviteError}</p>}
                 <div className="flex gap-2">
                   <button
@@ -411,7 +450,11 @@ export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboard
                     disabled={creating}
                     className="flex-1 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white font-medium rounded-lg transition-colors"
                   >
-                    {creating ? "Generating..." : "Generate invite link"}
+                    {creating
+                      ? "Saving..."
+                      : addMode === "wallet"
+                      ? "Add contributor"
+                      : "Generate invite link"}
                   </button>
                   <button
                     onClick={() => { setShowInvite(false); setInviteError(""); }}
@@ -426,7 +469,7 @@ export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboard
                 onClick={() => setShowInvite(true)}
                 className="w-full py-2 text-sm text-indigo-600 hover:text-indigo-700 border border-dashed border-indigo-200 rounded-lg transition-colors"
               >
-                + Invite by Link
+                + Add Contributor
               </button>
             )}
           </div>
@@ -539,6 +582,12 @@ export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboard
           ownerPrivyId={ownerPrivyId}
           splitMode={splitMode}
           fixedTotal={fixedTotal.toString()}
+          contributors={contributors.map((c) => ({
+            id: c.id,
+            role: c.role,
+            wallet: c.wallet,
+            fixedAmount: c.fixedAmount,
+          }))}
         />
       )}
     </div>
