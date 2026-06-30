@@ -582,6 +582,12 @@ export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboard
           ownerPrivyId={ownerPrivyId}
           splitMode={splitMode}
           fixedTotal={fixedTotal.toString()}
+          contributors={contributors.map((c) => ({
+            id: c.id,
+            role: c.role,
+            wallet: c.wallet,
+            fixedAmount: c.fixedAmount,
+          }))}
         />
       )}
     </div>
