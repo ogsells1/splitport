@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { formatUnits } from "viem";
+import { AutoPayoutRow } from "./AutoPayoutRow";
 
 interface Contributor {
   id: string;
@@ -340,6 +341,10 @@ export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboard
             {distError && <p className="text-xs text-red-500 mt-1.5">{distError}</p>}
           </div>
         </div>
+      )}
+
+      {isOwner && contributors.length > 0 && (
+        <AutoPayoutRow address={address} ownerPrivyId={ownerPrivyId} />
       )}
     </div>
   );

@@ -32,13 +32,41 @@ model Project {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  owner         User           @relation(fields: [ownerId], references: [id])
+  owner         User             @relation(fields: [ownerId], references: [id])
   contributors  Contributor[]
   transactions  Transaction[]
   distributions Distribution[]
   payouts       Payout[]
+  schedule      PayoutSchedule?
 
   @@map("projects")
+}
+
+// Owner-configured automatic payouts. A daily cron distributes a fixed amount
+// from the treasury across the project's contributors whenever nextRunAt is due.
+// One schedule per project. WEEKLY/MONTHLY auto-advance nextRunAt after each run;
+// CUSTOM is a one-shot run that deactivates itself afterwards.
+model PayoutSchedule {
+  id        String            @id @default(cuid())
+  projectId String            @unique
+  frequency ScheduleFrequency
+  amount    BigInt            // fixed USDC per run, 6 decimals
+  nextRunAt DateTime
+  active    Boolean           @default(true)
+  lastRunAt DateTime?
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id])
+
+  @@index([active, nextRunAt])
+  @@map("payout_schedules")
+}
+
+enum ScheduleFrequency {
+  WEEKLY
+  MONTHLY
+  CUSTOM
 }
 
 model Contributor {
