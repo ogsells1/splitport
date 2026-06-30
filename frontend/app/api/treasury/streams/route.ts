@@ -78,7 +78,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { ownerPrivyId, contractAddress, total, startAt, endAt } = body;
+    const { ownerPrivyId, contractAddress, total, startAt, endAt, contributorIds } = body;
 
     if (!ownerPrivyId || !contractAddress) {
       return NextResponse.json(
@@ -96,11 +96,15 @@ export async function POST(request: Request) {
       }
       totalUsdcInput = parseUnits(String(totalNum), 6);
     }
-    const start = startAt ? new Date(startAt) : new Date();
+    const now = new Date();
+    // A date-only picker yields midnight, so a start "today" would already be
+    // partway accrued. Clamp any past/empty start to now so streams begin at 0%.
+    let start = startAt ? new Date(startAt) : now;
     const end = new Date(endAt);
     if (isNaN(start.getTime()) || isNaN(end.getTime())) {
       return NextResponse.json({ error: "Invalid start or end date" }, { status: 400 });
     }
+    if (start.getTime() < now.getTime()) start = now;
     if (end.getTime() <= start.getTime()) {
       return NextResponse.json({ error: "End date must be after the start date" }, { status: 400 });
     }
@@ -115,6 +119,7 @@ export async function POST(request: Request) {
     try {
       const computed = computeShares(project.splitMode, project.contributors, {
         amountUsdc: totalUsdcInput,
+        contributorIds: Array.isArray(contributorIds) ? contributorIds : undefined,
       });
       shares = computed.shares;
       committed = computed.total;
