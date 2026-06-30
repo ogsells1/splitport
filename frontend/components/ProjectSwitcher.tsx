@@ -74,8 +74,9 @@ export function ProjectSwitcher({ ownerPrivyId, currentAddress }: ProjectSwitche
               >
                 <p className="text-sm font-medium text-gray-900">{p.name}</p>
                 <p className="text-xs text-gray-400 font-mono mt-0.5">
-                  {p.contractAddress.slice(0, 8)}...{p.contractAddress.slice(-6)} ·{" "}
-                  {p.contributorCount} contributors
+                  {p.contractAddress.startsWith("db_")
+                    ? `${p.contributorCount} contributors`
+                    : `${p.contractAddress.slice(0, 8)}...${p.contractAddress.slice(-6)} · ${p.contributorCount} contributors`}
                 </p>
               </button>
             ))}

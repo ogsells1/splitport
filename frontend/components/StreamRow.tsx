@@ -1,0 +1,250 @@
+"use client";
+
+// Owner-facing "Streaming payouts" control. The owner commits a total amount over
+// a window [start, end]; it drips to contributors continuously (by %), reaching
+// the full even sum at the end date. Backed by /api/treasury/streams. Contributors
+// pull accrued funds anytime from their cabinet.
+
+import { useCallback, useEffect, useState } from "react";
+import { formatUnits } from "viem";
+
+type StreamStatus = "ACTIVE" | "CANCELED";
+
+interface Stream {
+  id: string;
+  total: string;
+  accrued: string;
+  claimed: string;
+  startAt: string;
+  endAt: string;
+  status: StreamStatus;
+}
+
+interface StreamRowProps {
+  address: string;
+  ownerPrivyId: string;
+}
+
+function fmtDate(iso: string) {
+  return new Date(iso).toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function usdc(v: string) {
+  return parseFloat(formatUnits(BigInt(v), 6)).toFixed(2);
+}
+
+export function StreamRow({ address, ownerPrivyId }: StreamRowProps) {
+  const [streams, setStreams] = useState<Stream[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [adding, setAdding] = useState(false);
+
+  const [total, setTotal] = useState("");
+  const [start, setStart] = useState("");
+  const [end, setEnd] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  const load = useCallback(async () => {
+    if (!ownerPrivyId) return;
+    try {
+      const res = await fetch(
+        `/api/treasury/streams?contractAddress=${encodeURIComponent(
+          address
+        )}&ownerPrivyId=${encodeURIComponent(ownerPrivyId)}`
+      );
+      const data = await res.json();
+      if (res.ok) setStreams(data.streams ?? []);
+    } catch {}
+    setLoading(false);
+  }, [address, ownerPrivyId]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  // Re-poll active streams so the accrued bar advances while the page is open.
+  useEffect(() => {
+    if (!streams.some((s) => s.status === "ACTIVE")) return;
+    const t = setInterval(load, 15000);
+    return () => clearInterval(t);
+  }, [streams, load]);
+
+  async function create() {
+    setError("");
+    const amt = parseFloat(total);
+    if (!amt || amt <= 0) {
+      setError("Enter a total greater than 0.");
+      return;
+    }
+    if (!end) {
+      setError("Pick an end date.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await fetch("/api/treasury/streams", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ownerPrivyId,
+          contractAddress: address,
+          total: amt,
+          startAt: start ? new Date(start).toISOString() : undefined,
+          endAt: new Date(end).toISOString(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed to start stream");
+      setTotal("");
+      setStart("");
+      setEnd("");
+      setAdding(false);
+      await load();
+    } catch (e: any) {
+      setError(e.message ?? "Failed to start stream");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function cancel(id: string) {
+    await fetch(
+      `/api/treasury/streams?id=${id}&ownerPrivyId=${encodeURIComponent(ownerPrivyId)}`,
+      { method: "DELETE" }
+    );
+    load();
+  }
+
+  if (loading) {
+    return <div className="h-24 bg-gray-100 rounded-2xl animate-pulse" />;
+  }
+
+  const activeCount = streams.filter((s) => s.status === "ACTIVE").length;
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-2xl p-5 space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-gray-400 uppercase tracking-wide">Streaming payouts</p>
+        {activeCount > 0 && (
+          <span className="text-xs font-medium text-indigo-600">{activeCount} streaming</span>
+        )}
+      </div>
+
+      {streams.length === 0 ? (
+        <p className="text-sm text-gray-500">
+          Drip a total amount to contributors continuously until a target date — they can pull
+          what&apos;s accrued anytime.
+        </p>
+      ) : (
+        <div className="space-y-3">
+          {streams.map((s) => {
+            const total = BigInt(s.total);
+            const accrued = BigInt(s.accrued);
+            const pct = total > 0n ? Number((accrued * 10000n) / total) / 100 : 0;
+            return (
+              <div key={s.id} className="space-y-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-medium text-gray-800">
+                    {usdc(s.total)} USDC
+                    <span className="text-xs text-gray-400 font-normal ml-1.5">
+                      {fmtDate(s.startAt)} → {fmtDate(s.endAt)}
+                    </span>
+                  </p>
+                  {s.status === "ACTIVE" ? (
+                    <button
+                      onClick={() => cancel(s.id)}
+                      className="text-xs text-red-500 hover:text-red-700"
+                    >
+                      Cancel
+                    </button>
+                  ) : (
+                    <span className="text-xs text-gray-400">canceled</span>
+                  )}
+                </div>
+                <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full ${
+                      s.status === "ACTIVE" ? "bg-indigo-500" : "bg-gray-300"
+                    }`}
+                    style={{ width: `${Math.min(pct, 100)}%` }}
+                  />
+                </div>
+                <p className="text-xs text-gray-400">
+                  {usdc(s.accrued)} accrued · {usdc(s.claimed)} claimed
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {adding ? (
+        <div className="space-y-3 pt-1">
+          <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden focus-within:border-indigo-400">
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="total to stream"
+              value={total}
+              onChange={(e) => setTotal(e.target.value)}
+              className="flex-1 px-3 py-2.5 text-sm text-gray-900 outline-none"
+            />
+            <span className="px-2 text-xs text-gray-400">USDC</span>
+          </div>
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <label className="text-xs text-gray-400 mb-1 block">Start (optional)</label>
+              <input
+                type="date"
+                value={start}
+                onChange={(e) => setStart(e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-indigo-400"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="text-xs text-gray-400 mb-1 block">End date</label>
+              <input
+                type="date"
+                value={end}
+                onChange={(e) => setEnd(e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-indigo-400"
+              />
+            </div>
+          </div>
+          {error && <p className="text-xs text-red-500">{error}</p>}
+          <div className="flex gap-2">
+            <button
+              onClick={create}
+              disabled={saving}
+              className="flex-1 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white font-medium rounded-lg transition-colors"
+            >
+              {saving ? "Starting..." : "Start stream"}
+            </button>
+            <button
+              onClick={() => { setAdding(false); setError(""); }}
+              className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          onClick={() => setAdding(true)}
+          className="w-full py-2 text-sm text-indigo-600 hover:text-indigo-700 border border-dashed border-indigo-200 rounded-lg transition-colors"
+        >
+          + Start a stream
+        </button>
+      )}
+      <p className="text-xs text-gray-400">
+        The full total is reserved from the treasury upfront and accrues by the second across
+        contributors by their %. Canceling returns the unclaimed remainder.
+      </p>
+    </div>
+  );
+}

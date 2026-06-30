@@ -43,6 +43,8 @@ export async function GET(request: Request) {
         percentage: c.percentage,
         role: c.role,
         totalPaid: c.totalPaid.toString(),
+        status: c.status,
+        inviteToken: c.status === "PENDING" ? c.inviteToken : undefined,
       })),
     });
   } catch (error) {
@@ -86,14 +88,18 @@ export async function POST(request: Request) {
       },
     });
 
-    // Пересоздать contributors
-    await prisma.contributor.deleteMany({ where: { projectId: project.id } });
+    // Пересоздать contributors, отражающих on-chain состояние.
+    // Pending инвайты (ещё не привязан кошелёк) не на цепочке — их не трогаем.
+    await prisma.contributor.deleteMany({
+      where: { projectId: project.id, status: "CLAIMED" },
+    });
     await prisma.contributor.createMany({
       data: contributors.map((c: any) => ({
         projectId: project.id,
         wallet: c.wallet,
         percentage: c.percentage,
         role: c.role,
+        status: "CLAIMED",
       })),
     });
 

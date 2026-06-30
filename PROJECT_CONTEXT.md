@@ -29,14 +29,16 @@ https://github.com/ogsells1/byn-split-pay
 - Vercel project: https://vercel.com/ofi-s-projects/byn-split-pay
 - Supabase project: lwvyknrmowbcnrzdcyqd (eu-west-1, через pooler — direct connection IPv6-only и не работает на этой сети)
 
-## Core Flow (multi-project)
-Sign in → `/dashboard` редиректит на первый проект пользователя или на `/create`,
-если проектов нет → `/create` деплоит новый SplitVault из браузера (useDeployContract),
-инициализирует участников, сохраняет проект в БД за текущим Privy user →
-`/dashboard/[address]` — управление конкретным проектом (deposit, distribute,
-edit contributors) → `/balance` — единый баланс кошелька, можно задепозитить
-сразу в любой из проектов → `/history` — единая лента по всем проектам или
-фильтр на один.
+## DB-first проекты (без контракта) ✅ задеплоено
+Новые проекты создаются БЕЗ on-chain контракта — ни owner, ни участник не нуждаются в web3/газе/подписи. `/create` (переписан, без деплоя): имя + контрибьюторы, каждый либо по кошельку (CLAIMED), либо по инвайт-ссылке (PENDING+token). `POST /api/project/create` генерит синтетический `contractAddress` вида `db_<hex>` (чтобы вся маршрутизация по contractAddress продолжала работать) и возвращает инвайт-ссылки. Дашборд `/dashboard/[address]` ветвится: `isAddress` → старый on-chain вид (`VaultInfo` и т.д.); `db_…` → `components/DbProjectDashboard.tsx`. Старые контракт-проекты (0x…) работают как раньше.
+
+`DbProjectDashboard` показывает: контрибьюторов/инвайты из БД (генерация/копирование/отзыв ссылок, статусы), **баланс трежери + поле суммы и кнопку Distribute прямо на странице проекта** (по %), и сколько уже распределено в проект. Распределять можно ДО подтверждения инвайтов (доля резервируется).
+
+## Core Flow (актуальный, кастодиальный)
+Sign in → `/dashboard` — **хаб** (`app/dashboard/page.tsx`, НЕ редирект): карточка «Your cabinet» (claimable + Open cabinet, роль контрибьютора) и «Your projects» (список своих проектов + New, роль создателя). Заголовок «BYN Split Pay» в шапке везде ведёт на `/dashboard`.
+- **Создатель:** `/create` (DB-first, без web3) → проект + инвайт-ссылки → `/dashboard/[db_id]` (управление + Distribute) → `/treasury` (пополнение картой/криптой).
+- **Контрибьютор:** инвайт-ссылка `/invite/[token]` → логин (Privy создаёт кошелёк сам) → `/cabinet`: claimable, кнопка Claim (executor шлёт USDC, комиссия вычитается из доли), + блок «Add Arc network / Add USDC token» (EIP-1193) чтобы увидеть деньги во внешнем кошельке.
+- `/balance` → редирект на `/treasury`. `/history` — лента транзакций (для on-chain проектов).
 
 ## Структура репозитория
 
@@ -108,8 +110,51 @@ Security: ReentrancyGuard, Ownable, Pausable, SafeERC20.
 ## База данных (Prisma + Supabase, применена ✅)
 - `users` — id, privyId (уникальный, реальный Privy user.id или "cli-admin"/"system" для легаси), email, wallet
 - `projects` — id, name, contractAddress (уникальный), usdcAddress, chainId, deployBlock, ownerId → users
-- `contributors` — id, projectId, wallet, percentage (basis points), role, active, totalPaid
+- `contributors` — id, projectId, wallet (nullable — pending-инвайт без кошелька), percentage (basis points), role, active, totalPaid, status (PENDING/CLAIMED), inviteToken (uniq), claimedByPrivyId (никогда не отдаётся в owner-facing API)
 - `transactions` — id, projectId, type (DEPOSIT/PAYMENT/DISTRIBUTION), amount, txHash, blockNumber, timestamp, fromAddress, toAddress, role
+- `treasury_deposits` — id, userId, source (CARD/CRYPTO), amount (USDC 6 dec), status (PENDING/CONFIRMED/FAILED), stripeSessionId (uniq), txHash (uniq), confirmedAt. Баланс трежери = сумма CONFIRMED.
+- `payout_schedules` — id, projectId (uniq, 1 расписание/проект), frequency (WEEKLY/MONTHLY/CUSTOM), amount (фикс USDC 6 dec за запуск), nextRunAt, active, lastRunAt. Авто-выплаты (см. ниже).
+- `scheduled_payouts` — id, projectId (много на проект), amount (фикс USDC 6 dec), runAt, status (PENDING/DONE/CANCELED), distributionId (после запуска), ranAt. Очередь разовых отложенных выплат.
+- `payout_streams` — id, projectId, total (USDC 6 dec), startAt, endAt, status (ACTIVE/CANCELED), canceledAt. Superfluid-style поток.
+- `stream_shares` — id, streamId, contributorId, wallet (null до клейма инвайта), amount (полная доля за окно), claimedAmount. Доля контрибьютора в потоке.
+- `stream_claims` — id, shareId, amount (накопленное, забранное за раз), netAmount, feeAmount, txHash (uniq), claimedAt. История клеймов потока.
+
+## Invite-link flow (контрибьюторы) ✅
+Owner на дашборде («Edit Contributors» → «Invite by Link») создаёт слот роль+% без кошелька → `POST /api/invite` отдаёт `inviteToken` → ссылка `/invite/[token]`. Участник логинится через Privy и привязывает свой кошелёк (`POST /api/invite/[token]`). Owner видит подтверждение (бейдж + баннер), добавляет в список и пересчитывает % до 100, затем `replaceContributors` (on-chain). Owner НЕ видит связку личность↔адрес (адрес on-chain публичен всегда, скрыта именно личность). `DELETE /api/invite/[token]` — отзыв неклеймнутого. API: `frontend/app/api/invite/`, UI: `app/invite/[token]/page.tsx` + `components/ContributorsEditor.tsx`.
+
+## Treasury + кабинет участника (полностью кастодиальная модель) ✅ задеплоено
+Цель: и owner, и участник могут НЕ знать web3. Поток: **owner пополняет трежери (карта/крипта) → распределяет по % → участник в своём кабинете жмёт Claim → executor шлёт USDC на его кошелёк**. Тестнет: 1 USD = 1 USDC. Баланс трежери = sum(CONFIRMED deposits) − sum(Distribution.total).
+- **Пополнение** (`/treasury`): `api/treasury/route`=GET баланс/депозиты/distributions, `checkout`=Stripe session, `webhook`=Stripe confirm (idempotent), `deposit-crypto`=верификация Transfer on-chain по txHash.
+- **Distribute** (`POST /api/treasury/distribute`): owner делит сумму из трежери по basis points контрибьюторов → создаёт `Distribution` + по одному `Payout` на участника. Можно распределять ДО подтверждения инвайтов: pending-контрибьютору создаётся «зарезервированный» payout с `wallet=null` (+ `contributorId`); при подтверждении инвайта (`POST /api/invite/[token]`) кошелёк проставляется в эти payout'ы (updateMany) и они становятся claimable в кабинете. Требует только сумму % = 100. Dust остаётся в трежери. UI: `components/TreasuryDistributeRow.tsx`.
+- **Кабинет** (`/cabinet`, участник-facing): `GET /api/cabinet?wallet=` — claimable (PENDING payouts по кошельку) + история. `POST /api/cabinet/claim` — executor (`lib/executor.ts`) одним transfer шлёт (gross − fee) USDC на кошелёк, газ платит executor, **комиссия вычитается из доли участника**. ⚠️ Газ-токен Arc = 18 знаков (wei), а USDC ERC20 = 6 знаков: fee = `gas×gasPrice×1.2 / 10^12` (конвертация wei→USDC units; без неё claim падал «balance too small»). Помечает payouts CLAIMED. Privy embedded wallet создаётся автоматически. Также в кабинете кнопки «Add Arc network» / «Add USDC token» (EIP-1193 `wallet_addEthereumChain`/`wallet_watchAsset`) — чтобы участник увидел поступление во внешнем кошельке.
+- Invite-флоу после привязки кошелька ведёт в `/cabinet`.
+
+## Авто-выплаты (scheduled distribute) ✅
+Owner на странице проекта задаёт **фиксированную сумму** + частоту: раз в неделю / раз в месяц / кастомная разовая дата. По расписанию автоматически выполняется тот же кастодиальный distribute (создаёт claimable `Payout`'ы по %); контрибьютор по-прежнему сам жмёт Claim в кабинете.
+- Логика distribute вынесена в `lib/distribute.ts` (`runDistribution`, `DistributionError`) — общая для ручного `POST /api/treasury/distribute` и крона. `ownerPrivyId` опционален: задан → проверка владельца (ручной путь), опущен → системный запуск (крон).
+- `lib/schedule.ts` — `advanceFrom`/`defaultNextRun` (WEEKLY +7д, MONTHLY +1мес, CUSTOM one-shot).
+- API `app/api/treasury/schedule/route.ts`: GET (текущее расписание), POST (upsert: frequency+amount+nextRunAt?, для WEEKLY/MONTHLY дата опциональна = через интервал от now, для CUSTOM обязательна), DELETE (выключить). Все — owner-only.
+- Cron-runner `app/api/treasury/schedule/run/route.ts` (GET): берёт active && nextRunAt ≤ now, на каждом запускает `runDistribution`, затем WEEKLY/MONTHLY → продвигает `nextRunAt` (от запланированной даты, перепрыгивая пропущенные интервалы), CUSTOM → `active=false`. Недостаток баланса (`DistributionError`) → расписание не трогаем, ретрай на следующий день. Опц. защита `CRON_SECRET` (Bearer).
+- `vercel.json`: добавлен дневной крон `0 4 * * *` (Hobby: 2 крона макс — это второй после sync).
+- UI: `components/AutoPayoutRow.tsx`, встроен в `DbProjectDashboard` под блоком Distribute (owner + есть контрибьюторы).
+
+### Разовые отложенные выплаты (one-off queue) ✅
+Помимо одного recurring-расписания, owner может поставить **сколько угодно** разовых выплат (сумма + дата). Модель `scheduled_payouts` (много на проект). Тот же cron `…/schedule/run` после recurring проходит по `status=PENDING && runAt ≤ now`, делает `runDistribution`, помечает DONE (+ `distributionId`, `ranAt`). Нехватка баланса → остаётся PENDING, ретрай завтра.
+- API `app/api/treasury/payments/route.ts`: GET (список по проекту), POST ({amount, runAt} → ставит в очередь), DELETE (?id= → отменяет только PENDING → CANCELED). Owner-only.
+- UI: `components/ScheduledPayoutsRow.tsx` — список выплат со статусами + «Schedule a payout» + Cancel, под `AutoPayoutRow` в `DbProjectDashboard`.
+
+### Стриминговые выплаты (Superfluid-style) ✅
+Owner коммитит `total` USDC на окно `[startAt, endAt]`; доля каждого контрибьютора **копится линейно по секундам** (accrued = share × прошедшая доля времени), получатель забирает накопленное-минус-забранное в кабинете в любой момент. Накопление считается **на чтение**, без cron.
+- **Учёт баланса централизован** в `lib/treasuryBalance.ts` (`getAvailableBalance(ownerId)`): `available = Σ CONFIRMED deposits − Σ Distribution.total − Σ stream commitment`. Stream commitment: ACTIVE → весь `total` (резерв-буфер вперёд, как Superfluid); CANCELED → только `Σ claimedAmount` (незабранный остаток возвращается). Используется в treasury GET, `lib/distribute.ts`, создании потока.
+- `lib/stream.ts` — `accruedAmount(amount,start,end,asOf)` (clamp 0..amount, integer math по мс), `claimableNow(share,stream,asOf)` (CANCELED → 0).
+- API `app/api/treasury/streams/route.ts`: GET (список + accrued/claimed), POST (total+окно → резерв всей суммы, split по bps, dust остаётся; требует % = 100 и достаточный баланс), DELETE (cancel: status=CANCELED, остаток возвращается). Owner-only.
+- **Кабинет**: `GET /api/cabinet` теперь отдаёт `claimable = pending payouts + Σ stream claimableNow` и массив `streams`. `POST /api/cabinet/claim` собирает payout'ы И накопленное из потоков в **один transfer**; на успех инкрементит `streamShare.claimedAmount` + пишет `StreamClaim` (snapshot accrued на момент claim, чтобы не забрать больше начисленного). Комиссия делится пропорционально по всем claim'ам.
+- **Pending-инвайты**: при привязке кошелька (`POST /api/invite/[token]`) кошелёк проставляется и в `stream_shares` (как в payout'ах), доля становится claimable.
+- UI: owner — `components/StreamRow.tsx` (создание потока, прогресс-бар accrued/total, Cancel; авто-poll 15с), встроен в `DbProjectDashboard`. Контрибьютор — блок «Streaming in» в `app/cabinet/page.tsx` (живой прогресс, +claimable; poll 8с).
+- ⚠️ Отмена = «целиком»: незабранное (даже уже накопленное) возвращается в трежери, claimable потока → 0.
+- Env (в Vercel Production ✅): `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_TREASURY_ADDRESS`, `EXECUTOR_PRIVATE_KEY`. Без ключей — 503, UI не падает.
+- ⚠️ Executor-кошелёк (`0xf89f…7A56`, см. memory) должен реально держать USDC (фаусет): card-пополнение кредитит только БД, on-chain USDC туда не поступает. Распределение — чисто БД; реальный USDC уходит только при claim.
+- 🗑️ Старый on-chain allocate в SplitVault (`/api/treasury/allocate`, `Allocation` модель, `TreasuryAllocateRow`) удалён — заменён кастодиальным distribute. Старый `/balance` редиректит на `/treasury`.
 
 ⚠️ Demo-проект (`0x2DB3dbDA6C5F5CfF3234CDBadD049D90412c1774`) принадлежит технической учётке `ownerId="system"` — он НЕ появится в списке проектов реального пользователя. Реальные проекты создаются через `/create`.
 
@@ -127,24 +172,24 @@ Security: ReentrancyGuard, Ownable, Pausable, SafeERC20.
    ```
 
 ## Текущий прогресс
-- [x] SplitVault.sol — deploy, initialize, deposit, distribute, distributePartial, replaceContributors — всё протестировано (19/19 тестов)
-- [x] Frontend на Vercel, Privy login (Google), Arc Testnet
-- [x] Backend: Prisma + Supabase, API routes, cron sync
-- [x] Мобильная адаптация (/history карточный вид)
-- [x] Multi-project: /create (деплой из браузера), ProjectSwitcher, /dashboard/[address]
-- [x] /history — унифицированная по всем проектам + фильтр на конкретный, читает из БД
-- [x] /balance — unified balance кошелька + allocate в любой проект с одного экрана
-- [x] Auto-refresh баланса (poll 8s + invalidate после своих транзакций)
-- [x] Partial distribution с выбором суммы в UI
+- [x] Legacy on-chain: SplitVault.sol (deploy/initialize/distribute/replaceContributors), /history, ProjectSwitcher — работают для старых 0x-проектов
+- [x] Frontend на Vercel, Privy login (Google/email/wallet + embedded), Arc Testnet
+- [x] Backend: Prisma + Supabase, API routes
+- [x] **Полный кастодиальный pivot (no-web3 для всех ролей):**
+  - [x] Treasury: пополнение картой (Stripe) и криптой, баланс
+  - [x] Distribute по % (кастодиально, в БД), в т.ч. ДО подтверждения инвайтов (резерв доли)
+  - [x] Кабинет участника + Claim (executor платит газ, fee из доли; фикс 18→6 знаков)
+  - [x] Add Arc network / Add USDC token в кабинете
+  - [x] DB-first проекты (без контракта), инвайты при создании
+  - [x] Distribute прямо на странице проекта (баланс + сумма)
+  - [x] `/dashboard` — хаб (контрибьютор/создатель); заголовок → /dashboard
 
 ## Следующие шаги (на обсуждение в новом чате)
-1. **Запланированные выплаты** — обсуждали, но не начали. Ключевая развилка:
-   - (a) Автоисполнение по cron — нужен серверный кошелёк с приватным ключом в Vercel env + свои USDC на газ (gas token = USDC на Arc). `distribute()`/`distributePartial()` можно звать от любого адреса (нет onlyOwner), так что технически серверный "executor" кошелёк может это делать.
-   - (b) Ручное подтверждение — UI показывает "Due", юзер подтверждает своим кошельком. Без серверных ключей.
-   - Нужна новая таблица `ScheduledPayment` (projectId, amount|full, scheduledAt, status, executedAt, txHash).
-2. UI создания проекта пока не валидирует баланс кошелька перед деплоем (можно улучшить UX)
-3. AI Split — V3, не начато
-4. Рассмотреть Vercel Pro, если нужен sync чаще раза в сутки
+1. **Сквозной live-тест на проде**: создать DB-проект → инвайты → пополнить трежери картой → distribute → участник claim → проверить приход USDC во внешнем кошельке (Add network/token).
+2. **Запланированные/авто-выплаты** — executor уже есть; можно автклеймить или автраспределять по расписанию. Нужна таблица расписания.
+3. Редактирование контрибьюторов/% для DB-проектов (сейчас в DbProjectDashboard только добавление инвайтов; нет изменения долей/удаления claimed).
+4. Реальный курс фиат→USDC (сейчас 1:1 хардкод) + мейннет-онрамп.
+5. AI Split — V3, не начато.
 
 ## Полезные команды
 ```bash

@@ -11,15 +11,31 @@ interface ContributorsEditorProps {
   ownerPrivyId?: string;
 }
 
-type Row = { wallet: string; percentage: string; role: string };
+type Row = {
+  wallet: string;
+  percentage: string;
+  role: string;
+  status: "CLAIMED" | "PENDING";
+  inviteToken?: string;
+};
 
 type Step = "idle" | "distributing" | "replacing" | "syncing" | "done" | "error";
 
 export function ContributorsEditor({ vaultAddress, walletAddress, ownerPrivyId }: ContributorsEditorProps) {
   const [open, setOpen] = useState(false);
   const [rows, setRows] = useState<Row[]>([]);
+  const [pendingInvites, setPendingInvites] = useState<Row[]>([]);
+  const [readyToSync, setReadyToSync] = useState<Row[]>([]);
   const [step, setStep] = useState<Step>("idle");
   const [errorMsg, setErrorMsg] = useState("");
+
+  const [showInviteForm, setShowInviteForm] = useState(false);
+  const [inviteRole, setInviteRole] = useState("");
+  const [invitePct, setInvitePct] = useState("");
+  const [inviteError, setInviteError] = useState("");
+  const [creatingInvite, setCreatingInvite] = useState(false);
+  const [newInviteLink, setNewInviteLink] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const { writeContractAsync } = useWriteContract();
 
@@ -53,10 +69,70 @@ export function ContributorsEditor({ vaultAddress, walletAddress, ownerPrivyId }
             wallet: c.wallet,
             percentage: String(Number(c.percentage) / 100),
             role: c.role,
+            status: "CLAIMED" as const,
           }))
       );
     }
   }, [open, contributors]);
+
+  async function refreshInvites() {
+    try {
+      const res = await fetch(`/api/project?contractAddress=${vaultAddress}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      const onChainWallets = new Set((contributors ?? []).map((c) => c.wallet.toLowerCase()));
+      const rowWallets = new Set(rows.map((r) => r.wallet.toLowerCase()).filter(Boolean));
+
+      const stillWaiting: Row[] = [];
+      const claimedNotSynced: Row[] = [];
+
+      for (const c of data.contributors ?? []) {
+        if (c.status === "PENDING") {
+          stillWaiting.push({
+            wallet: "",
+            percentage: String(c.percentage / 100),
+            role: c.role,
+            status: "PENDING",
+            inviteToken: c.inviteToken,
+          });
+        } else if (
+          c.wallet &&
+          !onChainWallets.has(c.wallet.toLowerCase()) &&
+          !rowWallets.has(c.wallet.toLowerCase())
+        ) {
+          claimedNotSynced.push({
+            wallet: c.wallet,
+            percentage: String(c.percentage / 100),
+            role: c.role,
+            status: "CLAIMED",
+          });
+        }
+      }
+
+      setPendingInvites(stillWaiting);
+      setReadyToSync(claimedNotSynced);
+    } catch {
+      // best-effort
+    }
+  }
+
+  // Poll for claims even while the editor is closed, so the owner sees a
+  // badge on the "Edit Contributors" button as soon as someone claims a link.
+  useEffect(() => {
+    if (!isOwner) return;
+    refreshInvites();
+    const interval = setInterval(refreshInvites, open ? 6000 : 20000);
+    return () => clearInterval(interval);
+  }, [open, contributors, isOwner]);
+
+  function applyClaimedToRows() {
+    setRows((prev) => {
+      const existing = new Set(prev.map((r) => r.wallet.toLowerCase()));
+      const toAdd = readyToSync.filter((r) => !existing.has(r.wallet.toLowerCase()));
+      return toAdd.length > 0 ? [...prev, ...toAdd] : prev;
+    });
+    setReadyToSync([]);
+  }
 
   if (!isOwner) return null;
 
@@ -76,7 +152,40 @@ export function ContributorsEditor({ vaultAddress, walletAddress, ownerPrivyId }
   }
 
   function addRow() {
-    setRows((prev) => [...prev, { wallet: "", percentage: "", role: "" }]);
+    setRows((prev) => [...prev, { wallet: "", percentage: "", role: "", status: "CLAIMED" }]);
+  }
+
+  async function createInvite() {
+    setInviteError("");
+    const pct = parseFloat(invitePct);
+    if (!inviteRole.trim() || !pct || pct <= 0) {
+      setInviteError("Enter a role and a percentage greater than 0.");
+      return;
+    }
+    setCreatingInvite(true);
+    try {
+      const res = await fetch("/api/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ownerPrivyId,
+          contractAddress: vaultAddress,
+          role: inviteRole.trim(),
+          percentage: Math.round(pct * 100),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed to create invite");
+
+      setNewInviteLink(`${window.location.origin}/invite/${data.inviteToken}`);
+      setInviteRole("");
+      setInvitePct("");
+      await refreshInvites();
+    } catch (e: any) {
+      setInviteError(e.message ?? "Failed to create invite");
+    } finally {
+      setCreatingInvite(false);
+    }
   }
 
   function removeRow(i: number) {
@@ -143,9 +252,14 @@ export function ContributorsEditor({ vaultAddress, walletAddress, ownerPrivyId }
     return (
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center justify-center gap-2 py-3 px-4 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-medium rounded-xl transition-colors text-sm"
+        className="relative flex items-center justify-center gap-2 py-3 px-4 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-medium rounded-xl transition-colors text-sm"
       >
         <span>✎</span> Edit Contributors
+        {readyToSync.length > 0 && (
+          <span className="absolute -top-2 -right-2 flex items-center gap-1 bg-emerald-500 text-white text-[10px] font-semibold rounded-full px-1.5 py-0.5 leading-none">
+            ✓ {readyToSync.length}
+          </span>
+        )}
       </button>
     );
   }
@@ -223,12 +337,159 @@ export function ContributorsEditor({ vaultAddress, walletAddress, ownerPrivyId }
           ))}
         </div>
 
-        <button
-          onClick={addRow}
-          className="w-full py-2 text-sm text-indigo-600 hover:text-indigo-700 border border-dashed border-indigo-200 rounded-lg transition-colors"
-        >
-          + Add Contributor
-        </button>
+        {readyToSync.length > 0 && (
+          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 space-y-2">
+            <p className="text-sm font-medium text-emerald-800">
+              ✓ {readyToSync.length === 1 ? "Invite confirmed" : `${readyToSync.length} invites confirmed`} —
+              wallet linked
+            </p>
+            <ul className="space-y-1">
+              {readyToSync.map((r, i) => (
+                <li key={i} className="text-xs text-emerald-700 flex items-center justify-between gap-2">
+                  <span>
+                    <span className="font-medium">{r.role}</span> · {parseFloat(r.percentage).toFixed(2)}%
+                  </span>
+                  <span className="font-mono text-emerald-600">
+                    {r.wallet.slice(0, 6)}…{r.wallet.slice(-4)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <p className="text-xs text-emerald-700">
+              Add them to the list below, then adjust everyone's percentages back to 100% before saving.
+            </p>
+            <button
+              onClick={applyClaimedToRows}
+              className="w-full py-2 text-sm bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition-colors"
+            >
+              Add to contributors list
+            </button>
+          </div>
+        )}
+
+        {pendingInvites.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">
+              Waiting for participant
+            </p>
+            {pendingInvites.map((inv, i) => (
+              <div
+                key={i}
+                className="flex items-center justify-between gap-2 bg-amber-50 rounded-lg px-3 py-2"
+              >
+                <div className="text-xs text-amber-800">
+                  <span className="font-medium">{inv.role}</span> · {parseFloat(inv.percentage).toFixed(2)}%
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(`${window.location.origin}/invite/${inv.inviteToken}`);
+                    }}
+                    className="text-xs text-amber-700 hover:text-amber-900 underline"
+                  >
+                    Copy link
+                  </button>
+                  <button
+                    onClick={async () => {
+                      await fetch(`/api/invite/${inv.inviteToken}?ownerPrivyId=${ownerPrivyId}`, {
+                        method: "DELETE",
+                      });
+                      refreshInvites();
+                    }}
+                    className="text-xs text-red-500 hover:text-red-700"
+                  >
+                    Revoke
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="flex gap-2">
+          <button
+            onClick={addRow}
+            className="flex-1 py-2 text-sm text-indigo-600 hover:text-indigo-700 border border-dashed border-indigo-200 rounded-lg transition-colors"
+          >
+            + Add Contributor
+          </button>
+          <button
+            onClick={() => { setShowInviteForm((v) => !v); setNewInviteLink(null); setInviteError(""); }}
+            className="flex-1 py-2 text-sm text-gray-600 hover:text-gray-800 border border-dashed border-gray-300 rounded-lg transition-colors"
+          >
+            + Invite by Link
+          </button>
+        </div>
+
+        {showInviteForm && (
+          <div className="bg-gray-50 rounded-xl p-3 space-y-2">
+            {newInviteLink ? (
+              <div className="space-y-2">
+                <p className="text-xs text-gray-500">Share this link with the participant:</p>
+                <div className="flex items-center gap-2">
+                  <input
+                    readOnly
+                    value={newInviteLink}
+                    className="flex-1 px-2 py-1.5 text-xs font-mono border border-gray-200 rounded-lg bg-white outline-none"
+                  />
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(newInviteLink);
+                      setCopied(true);
+                      setTimeout(() => setCopied(false), 1500);
+                    }}
+                    className="text-xs text-indigo-600 hover:text-indigo-700 px-2 py-1.5 border border-indigo-200 rounded-lg"
+                  >
+                    {copied ? "Copied!" : "Copy"}
+                  </button>
+                </div>
+                <button
+                  onClick={() => setNewInviteLink(null)}
+                  className="text-xs text-gray-400 hover:text-gray-600"
+                >
+                  + Create another invite
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="flex gap-1.5">
+                  <input
+                    type="text"
+                    placeholder="role (e.g. artist)"
+                    value={inviteRole}
+                    onChange={(e) => setInviteRole(e.target.value)}
+                    className="flex-1 px-3 py-1.5 text-xs border border-gray-200 rounded-lg outline-none focus:border-indigo-400 transition-colors"
+                  />
+                  <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden focus-within:border-indigo-400">
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.01"
+                      placeholder="0"
+                      value={invitePct}
+                      onChange={(e) => setInvitePct(e.target.value)}
+                      className="w-16 px-2 py-1.5 text-xs text-right outline-none"
+                    />
+                    <span className="px-1.5 text-xs text-gray-400">%</span>
+                  </div>
+                </div>
+                {inviteError && <p className="text-xs text-red-500">{inviteError}</p>}
+                <button
+                  onClick={createInvite}
+                  disabled={creatingInvite}
+                  className="w-full py-2 text-sm bg-gray-800 hover:bg-gray-900 disabled:bg-gray-400 text-white font-medium rounded-lg transition-colors"
+                >
+                  {creatingInvite ? "Generating..." : "Generate invite link"}
+                </button>
+                <p className="text-xs text-gray-400">
+                  This share is reserved until the link is claimed — it won't count toward the
+                  100% on-chain until then.
+                </p>
+              </>
+            )}
+          </div>
+        )}
 
         <div
           className={`flex items-center justify-between text-sm px-3 py-2 rounded-lg ${
