@@ -1,10 +1,11 @@
 // frontend/app/api/treasury/schedule/run/route.ts
 // GET /api/treasury/schedule/run — invoked by Vercel Cron (see vercel.json) once a
-// day. Runs every active auto-payout schedule whose nextRunAt is due: distributes
-// the fixed amount from the treasury across the project's contributors, then
-// advances nextRunAt (WEEKLY/MONTHLY) or deactivates it (CUSTOM one-shot).
-// If a run can't complete (e.g. insufficient treasury balance), the schedule is
-// left untouched so the next daily cron retries it.
+// day. Two things run here:
+//   1. Recurring PayoutSchedules whose nextRunAt is due → distribute, then advance
+//      nextRunAt (WEEKLY/MONTHLY) or deactivate (CUSTOM one-shot).
+//   2. One-off ScheduledPayouts (PENDING, runAt due) → distribute, mark DONE.
+// If a run can't complete (e.g. insufficient treasury balance), the item is left
+// due so the next daily cron retries it.
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
@@ -79,6 +80,44 @@ export async function GET(request: NextRequest) {
         results.push({
           projectId: schedule.projectId,
           contractAddress: schedule.project.contractAddress,
+          status: isExpected ? "skipped" : "error",
+          detail: e?.message,
+        });
+      }
+    }
+
+    // --- One-off queued payouts ---
+    const dueOneOff = await prisma.scheduledPayout.findMany({
+      where: { status: "PENDING", runAt: { lte: now } },
+      include: { project: { select: { contractAddress: true } } },
+    });
+
+    for (const item of dueOneOff) {
+      try {
+        const result = await runDistribution({
+          contractAddress: item.project.contractAddress,
+          amountUsdc: item.amount,
+        });
+        await prisma.scheduledPayout.update({
+          where: { id: item.id },
+          data: { status: "DONE", ranAt: now, distributionId: result.distributionId },
+        });
+        results.push({
+          projectId: item.projectId,
+          contractAddress: item.project.contractAddress,
+          status: "distributed",
+          distributed: result.distributed.toString(),
+        });
+      } catch (e: any) {
+        // Insufficient balance / config issues: leave PENDING so the next daily
+        // cron retries it once funded.
+        const isExpected = e instanceof DistributionError;
+        if (!isExpected) {
+          console.error("[schedule/run one-off]", item.id, e);
+        }
+        results.push({
+          projectId: item.projectId,
+          contractAddress: item.project.contractAddress,
           status: isExpected ? "skipped" : "error",
           detail: e?.message,
         });
