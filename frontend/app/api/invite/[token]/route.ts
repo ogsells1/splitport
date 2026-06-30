@@ -16,7 +16,7 @@ export async function GET(
 
     const contributor = await prisma.contributor.findUnique({
       where: { inviteToken: token },
-      include: { project: { select: { name: true, contractAddress: true } } },
+      include: { project: { select: { name: true, contractAddress: true, splitMode: true } } },
     });
 
     if (!contributor) {
@@ -27,6 +27,8 @@ export async function GET(
       projectName: contributor.project.name,
       role: contributor.role,
       percentage: contributor.percentage,
+      fixedAmount: contributor.fixedAmount != null ? contributor.fixedAmount.toString() : null,
+      splitMode: contributor.project.splitMode,
       status: contributor.status,
     });
   } catch (error) {

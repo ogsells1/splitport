@@ -23,6 +23,8 @@ interface Stream {
 interface StreamRowProps {
   address: string;
   ownerPrivyId: string;
+  splitMode?: "PERCENTAGE" | "FIXED";
+  fixedTotal?: string; // USDC 6 dec, sum of fixed amounts (FIXED mode)
 }
 
 function fmtDate(iso: string) {
@@ -37,7 +39,8 @@ function usdc(v: string) {
   return parseFloat(formatUnits(BigInt(v), 6)).toFixed(2);
 }
 
-export function StreamRow({ address, ownerPrivyId }: StreamRowProps) {
+export function StreamRow({ address, ownerPrivyId, splitMode = "PERCENTAGE", fixedTotal = "0" }: StreamRowProps) {
+  const isFixed = splitMode === "FIXED";
   const [streams, setStreams] = useState<Stream[]>([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
@@ -75,10 +78,14 @@ export function StreamRow({ address, ownerPrivyId }: StreamRowProps) {
 
   async function create() {
     setError("");
-    const amt = parseFloat(total);
-    if (!amt || amt <= 0) {
-      setError("Enter a total greater than 0.");
-      return;
+    // FIXED projects stream the sum of contributors' fixed amounts (total derived).
+    let amt: number | undefined;
+    if (!isFixed) {
+      amt = parseFloat(total);
+      if (!amt || amt <= 0) {
+        setError("Enter a total greater than 0.");
+        return;
+      }
     }
     if (!end) {
       setError("Pick an end date.");
@@ -184,18 +191,26 @@ export function StreamRow({ address, ownerPrivyId }: StreamRowProps) {
 
       {adding ? (
         <div className="space-y-3 pt-1">
-          <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden focus-within:border-indigo-400">
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              placeholder="total to stream"
-              value={total}
-              onChange={(e) => setTotal(e.target.value)}
-              className="flex-1 px-3 py-2.5 text-sm text-gray-900 outline-none"
-            />
-            <span className="px-2 text-xs text-gray-400">USDC</span>
-          </div>
+          {isFixed ? (
+            <div className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2.5">
+              Streams the sum of contributors&apos; fixed amounts —{" "}
+              <span className="font-medium text-gray-700">{usdc(fixedTotal)} USDC</span> total over
+              the window.
+            </div>
+          ) : (
+            <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden focus-within:border-indigo-400">
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="total to stream"
+                value={total}
+                onChange={(e) => setTotal(e.target.value)}
+                className="flex-1 px-3 py-2.5 text-sm text-gray-900 outline-none"
+              />
+              <span className="px-2 text-xs text-gray-400">USDC</span>
+            </div>
+          )}
           <div className="flex gap-2">
             <div className="flex-1">
               <label className="text-xs text-gray-400 mb-1 block">Start (optional)</label>

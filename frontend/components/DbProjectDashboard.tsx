@@ -10,18 +10,26 @@ interface Contributor {
   id: string;
   wallet: string | null;
   percentage: number;
+  fixedAmount: string | null; // USDC 6 dec, FIXED mode
   role: string;
   status: "PENDING" | "CLAIMED";
   inviteToken?: string;
 }
+
+type SplitMode = "PERCENTAGE" | "FIXED";
 
 interface DbProjectDashboardProps {
   address: string; // synthetic db_ id
   ownerPrivyId: string;
 }
 
+function fmtUsdc(v: bigint) {
+  return parseFloat(formatUnits(v, 6)).toFixed(2);
+}
+
 export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboardProps) {
   const [name, setName] = useState("");
+  const [splitMode, setSplitMode] = useState<SplitMode>("PERCENTAGE");
   const [contributors, setContributors] = useState<Contributor[]>([]);
   const [isOwner, setIsOwner] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -29,6 +37,7 @@ export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboard
   const [showInvite, setShowInvite] = useState(false);
   const [inviteRole, setInviteRole] = useState("");
   const [invitePct, setInvitePct] = useState("");
+  const [inviteAmount, setInviteAmount] = useState("");
   const [inviteError, setInviteError] = useState("");
   const [creating, setCreating] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
@@ -41,12 +50,20 @@ export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboard
   const [distError, setDistError] = useState("");
   const [distDone, setDistDone] = useState(false);
 
+  // FIXED-mode: selected contributors + inline amount editing
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
+
+  const isFixed = splitMode === "FIXED";
+
   const load = useCallback(async () => {
     try {
       const res = await fetch(`/api/project?contractAddress=${address}`);
       const data = await res.json();
       if (res.ok) {
         setName(data.name);
+        setSplitMode(data.splitMode === "FIXED" ? "FIXED" : "PERCENTAGE");
         setContributors(data.contributors ?? []);
       }
     } catch {}
@@ -87,25 +104,41 @@ export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboard
   }, [loadTreasury]);
 
   const totalPct = contributors.reduce((s, c) => s + c.percentage, 0);
+  const fixedTotal = contributors.reduce((s, c) => s + BigInt(c.fixedAmount ?? "0"), 0n);
+  const selectedTotal = contributors
+    .filter((c) => selected.has(c.id))
+    .reduce((s, c) => s + BigInt(c.fixedAmount ?? "0"), 0n);
 
-  async function distribute() {
+  // Distribute by percentage (PERCENTAGE projects use the amount input).
+  async function distributePct() {
     setDistError("");
     const amt = parseFloat(distAmount);
     if (!amt || amt <= 0) {
       setDistError("Enter an amount greater than 0.");
       return;
     }
+    await runDistribute({ amount: amt });
+    setDistAmount("");
+  }
+
+  // Distribute fixed amounts to all or a chosen subset.
+  async function distributeFixed(ids?: string[]) {
+    setDistError("");
+    await runDistribute({ contributorIds: ids });
+  }
+
+  async function runDistribute(payload: { amount?: number; contributorIds?: string[] }) {
     setDistributing(true);
     try {
       const res = await fetch("/api/treasury/distribute", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ownerPrivyId, contractAddress: address, amount: amt }),
+        body: JSON.stringify({ ownerPrivyId, contractAddress: address, ...payload }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Distribution failed");
       setDistDone(true);
-      setDistAmount("");
+      setSelected(new Set());
       await loadTreasury();
       setTimeout(() => setDistDone(false), 2500);
     } catch (e: any) {
@@ -115,29 +148,61 @@ export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboard
     }
   }
 
+  function toggleSelected(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+
+  async function saveAmount(contributorId: string) {
+    const amt = parseFloat(editValue);
+    if (!amt || amt <= 0) return;
+    await fetch("/api/contributor", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ownerPrivyId, contributorId, amount: amt }),
+    });
+    setEditingId(null);
+    setEditValue("");
+    await load();
+  }
+
   async function createInvite() {
     setInviteError("");
-    const pct = parseFloat(invitePct);
-    if (!inviteRole.trim() || !pct || pct <= 0) {
-      setInviteError("Enter a role and a percentage greater than 0.");
+    if (!inviteRole.trim()) {
+      setInviteError("Enter a role.");
       return;
+    }
+    const body: any = { ownerPrivyId, contractAddress: address, role: inviteRole.trim() };
+    if (isFixed) {
+      const amt = parseFloat(inviteAmount);
+      if (!amt || amt <= 0) {
+        setInviteError("Enter a fixed amount greater than 0.");
+        return;
+      }
+      body.amount = amt;
+    } else {
+      const pct = parseFloat(invitePct);
+      if (!pct || pct <= 0) {
+        setInviteError("Enter a percentage greater than 0.");
+        return;
+      }
+      body.percentage = Math.round(pct * 100);
     }
     setCreating(true);
     try {
       const res = await fetch("/api/invite", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ownerPrivyId,
-          contractAddress: address,
-          role: inviteRole.trim(),
-          percentage: Math.round(pct * 100),
-        }),
+        body: JSON.stringify(body),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Failed to create invite");
       setInviteRole("");
       setInvitePct("");
+      setInviteAmount("");
       setShowInvite(false);
       await load();
     } catch (e: any) {
@@ -173,6 +238,9 @@ export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboard
         <div>
           <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Project</p>
           <h2 className="text-xl font-semibold text-gray-900">{name}</h2>
+          <span className="inline-block mt-1.5 text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
+            {isFixed ? "Fixed amount" : "Percentage split"}
+          </span>
         </div>
         {isOwner && (
           <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full mt-1">
@@ -184,13 +252,19 @@ export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboard
       <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
         <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
           <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Contributors</p>
-          <span
-            className={`text-xs font-medium ${
-              totalPct === 10000 ? "text-emerald-600" : "text-amber-600"
-            }`}
-          >
-            {(totalPct / 100).toFixed(2)}% / 100%
-          </span>
+          {isFixed ? (
+            <span className="text-xs font-medium text-gray-600">
+              {fmtUsdc(fixedTotal)} USDC / payout
+            </span>
+          ) : (
+            <span
+              className={`text-xs font-medium ${
+                totalPct === 10000 ? "text-emerald-600" : "text-amber-600"
+              }`}
+            >
+              {(totalPct / 100).toFixed(2)}% / 100%
+            </span>
+          )}
         </div>
 
         {contributors.length === 0 ? (
@@ -199,37 +273,89 @@ export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboard
           <div className="divide-y divide-gray-100">
             {contributors.map((c) => (
               <div key={c.id} className="flex items-center justify-between gap-3 px-4 py-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-gray-800">{c.role}</p>
-                  {c.status === "CLAIMED" && c.wallet ? (
-                    <p className="text-xs text-gray-400 font-mono mt-0.5">
-                      {c.wallet.slice(0, 6)}...{c.wallet.slice(-4)}
-                    </p>
-                  ) : (
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-xs text-amber-600">invite pending</span>
-                      {isOwner && c.inviteToken && (
-                        <>
-                          <button
-                            onClick={() => copy(c.inviteToken!)}
-                            className="text-xs text-indigo-600 hover:text-indigo-700 underline"
-                          >
-                            {copied === c.inviteToken ? "Copied!" : "Copy link"}
-                          </button>
-                          <button
-                            onClick={() => revoke(c.inviteToken!)}
-                            className="text-xs text-red-500 hover:text-red-700"
-                          >
-                            Revoke
-                          </button>
-                        </>
-                      )}
-                    </div>
+                <div className="flex items-center gap-3 min-w-0">
+                  {isFixed && isOwner && (
+                    <input
+                      type="checkbox"
+                      checked={selected.has(c.id)}
+                      onChange={() => toggleSelected(c.id)}
+                      className="w-4 h-4 accent-indigo-600 shrink-0"
+                    />
                   )}
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-800">{c.role}</p>
+                    {c.status === "CLAIMED" && c.wallet ? (
+                      <p className="text-xs text-gray-400 font-mono mt-0.5">
+                        {c.wallet.slice(0, 6)}...{c.wallet.slice(-4)}
+                      </p>
+                    ) : (
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-xs text-amber-600">invite pending</span>
+                        {isOwner && c.inviteToken && (
+                          <>
+                            <button
+                              onClick={() => copy(c.inviteToken!)}
+                              className="text-xs text-indigo-600 hover:text-indigo-700 underline"
+                            >
+                              {copied === c.inviteToken ? "Copied!" : "Copy link"}
+                            </button>
+                            <button
+                              onClick={() => revoke(c.inviteToken!)}
+                              className="text-xs text-red-500 hover:text-red-700"
+                            >
+                              Revoke
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <span className="text-sm font-semibold text-gray-900">
-                  {(c.percentage / 100).toFixed(2)}%
-                </span>
+
+                {isFixed ? (
+                  editingId === c.id ? (
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        className="w-20 px-2 py-1 text-sm text-right border border-gray-200 rounded-lg outline-none focus:border-indigo-400"
+                      />
+                      <button
+                        onClick={() => saveAmount(c.id)}
+                        className="text-xs text-indigo-600 hover:text-indigo-700"
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={() => { setEditingId(null); setEditValue(""); }}
+                        className="text-xs text-gray-400 hover:text-gray-600"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        if (!isOwner) return;
+                        setEditingId(c.id);
+                        setEditValue(formatUnits(BigInt(c.fixedAmount ?? "0"), 6));
+                      }}
+                      className={`text-sm font-semibold text-gray-900 ${
+                        isOwner ? "hover:text-indigo-600" : ""
+                      }`}
+                      title={isOwner ? "Edit amount" : undefined}
+                    >
+                      {fmtUsdc(BigInt(c.fixedAmount ?? "0"))} USDC
+                    </button>
+                  )
+                ) : (
+                  <span className="text-sm font-semibold text-gray-900">
+                    {(c.percentage / 100).toFixed(2)}%
+                  </span>
+                )}
               </div>
             ))}
           </div>
@@ -248,17 +374,34 @@ export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboard
                     className="flex-1 px-3 py-1.5 text-xs border border-gray-200 rounded-lg outline-none focus:border-indigo-400"
                   />
                   <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden focus-within:border-indigo-400">
-                    <input
-                      type="number"
-                      min="0"
-                      max="100"
-                      step="0.01"
-                      placeholder="0"
-                      value={invitePct}
-                      onChange={(e) => setInvitePct(e.target.value)}
-                      className="w-16 px-2 py-1.5 text-xs text-right outline-none"
-                    />
-                    <span className="px-1.5 text-xs text-gray-400">%</span>
+                    {isFixed ? (
+                      <>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="0.00"
+                          value={inviteAmount}
+                          onChange={(e) => setInviteAmount(e.target.value)}
+                          className="w-20 px-2 py-1.5 text-xs text-right outline-none"
+                        />
+                        <span className="px-1.5 text-xs text-gray-400">USDC</span>
+                      </>
+                    ) : (
+                      <>
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="0.01"
+                          placeholder="0"
+                          value={invitePct}
+                          onChange={(e) => setInvitePct(e.target.value)}
+                          className="w-16 px-2 py-1.5 text-xs text-right outline-none"
+                        />
+                        <span className="px-1.5 text-xs text-gray-400">%</span>
+                      </>
+                    )}
                   </div>
                 </div>
                 {inviteError && <p className="text-xs text-red-500">{inviteError}</p>}
@@ -296,7 +439,7 @@ export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboard
             <div>
               <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Treasury balance</p>
               <p className="text-2xl font-semibold text-gray-900">
-                {parseFloat(formatUnits(treasuryBalance, 6)).toFixed(2)}
+                {fmtUsdc(treasuryBalance)}
                 <span className="text-sm text-gray-400 ml-1.5">USDC</span>
               </p>
             </div>
@@ -304,57 +447,99 @@ export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboard
               <p className="text-xs text-gray-400 mb-1">
                 distributed to this project:{" "}
                 <span className="text-gray-600 font-medium">
-                  {parseFloat(formatUnits(distributedTotal, 6)).toFixed(2)} USDC
+                  {fmtUsdc(distributedTotal)} USDC
                 </span>
               </p>
             )}
           </div>
 
-          <div>
-            <div className="flex items-center gap-2">
-              <div className="flex-1 flex items-center border border-gray-200 rounded-lg overflow-hidden focus-within:border-indigo-400 transition-colors">
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={distAmount}
-                  onChange={(e) => setDistAmount(e.target.value)}
-                  className="flex-1 px-3 py-2.5 text-sm text-gray-900 outline-none"
-                />
-                <span className="px-2 text-xs text-gray-400">USDC</span>
+          {isFixed ? (
+            <div className="space-y-2">
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => distributeFixed()}
+                  disabled={distributing || distDone || treasuryBalance === 0n || fixedTotal === 0n}
+                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white text-sm font-medium rounded-lg transition-colors"
+                >
+                  {distributing ? "Distributing..." : distDone ? "✓ Distributed" : `Distribute to all · ${fmtUsdc(fixedTotal)} USDC`}
+                </button>
+                <button
+                  onClick={() => distributeFixed(Array.from(selected))}
+                  disabled={distributing || distDone || selected.size === 0}
+                  className="px-5 py-2.5 border border-indigo-200 text-indigo-700 hover:bg-indigo-50 disabled:opacity-40 text-sm font-medium rounded-lg transition-colors"
+                >
+                  Distribute selected{selected.size > 0 ? ` · ${fmtUsdc(selectedTotal)} USDC` : ""}
+                </button>
               </div>
-              <button
-                onClick={distribute}
-                disabled={distributing || distDone || treasuryBalance === 0n}
-                className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap"
-              >
-                {distributing ? "Distributing..." : distDone ? "✓ Distributed" : "Distribute"}
-              </button>
+              <p className="text-xs text-gray-400">
+                Each participant gets their fixed amount. Tick rows above to pay only some of them.
+                Need funds?{" "}
+                <a href="/treasury" className="text-indigo-600 hover:underline">Top up treasury</a>.
+              </p>
+              {distError && <p className="text-xs text-red-500">{distError}</p>}
             </div>
-            <p className="text-xs text-gray-400 mt-2">
-              Splits the amount across contributors by their %. Pending contributors' shares are
-              reserved until they accept their invite. Need funds?{" "}
-              <a href="/treasury" className="text-indigo-600 hover:underline">
-                Top up treasury
-              </a>
-              .
-            </p>
-            {distError && <p className="text-xs text-red-500 mt-1.5">{distError}</p>}
-          </div>
+          ) : (
+            <div>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 flex items-center border border-gray-200 rounded-lg overflow-hidden focus-within:border-indigo-400 transition-colors">
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={distAmount}
+                    onChange={(e) => setDistAmount(e.target.value)}
+                    className="flex-1 px-3 py-2.5 text-sm text-gray-900 outline-none"
+                  />
+                  <span className="px-2 text-xs text-gray-400">USDC</span>
+                </div>
+                <button
+                  onClick={distributePct}
+                  disabled={distributing || distDone || treasuryBalance === 0n}
+                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap"
+                >
+                  {distributing ? "Distributing..." : distDone ? "✓ Distributed" : "Distribute"}
+                </button>
+              </div>
+              <p className="text-xs text-gray-400 mt-2">
+                Splits the amount across contributors by their %. Pending contributors' shares are
+                reserved until they accept their invite. Need funds?{" "}
+                <a href="/treasury" className="text-indigo-600 hover:underline">
+                  Top up treasury
+                </a>
+                .
+              </p>
+              {distError && <p className="text-xs text-red-500 mt-1.5">{distError}</p>}
+            </div>
+          )}
         </div>
       )}
 
       {isOwner && contributors.length > 0 && (
-        <AutoPayoutRow address={address} ownerPrivyId={ownerPrivyId} />
+        <AutoPayoutRow
+          address={address}
+          ownerPrivyId={ownerPrivyId}
+          splitMode={splitMode}
+          fixedTotal={fixedTotal.toString()}
+        />
       )}
 
       {isOwner && contributors.length > 0 && (
-        <ScheduledPayoutsRow address={address} ownerPrivyId={ownerPrivyId} />
+        <ScheduledPayoutsRow
+          address={address}
+          ownerPrivyId={ownerPrivyId}
+          splitMode={splitMode}
+          fixedTotal={fixedTotal.toString()}
+        />
       )}
 
       {isOwner && contributors.length > 0 && (
-        <StreamRow address={address} ownerPrivyId={ownerPrivyId} />
+        <StreamRow
+          address={address}
+          ownerPrivyId={ownerPrivyId}
+          splitMode={splitMode}
+          fixedTotal={fixedTotal.toString()}
+        />
       )}
     </div>
   );
