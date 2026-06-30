@@ -35,9 +35,10 @@ model Project {
   owner         User             @relation(fields: [ownerId], references: [id])
   contributors  Contributor[]
   transactions  Transaction[]
-  distributions Distribution[]
-  payouts       Payout[]
-  schedule      PayoutSchedule?
+  distributions    Distribution[]
+  payouts          Payout[]
+  schedule         PayoutSchedule?
+  scheduledPayouts ScheduledPayout[]
 
   @@map("projects")
 }
@@ -61,6 +62,32 @@ model PayoutSchedule {
 
   @@index([active, nextRunAt])
   @@map("payout_schedules")
+}
+
+// Owner-queued one-off payouts: any number per project, each a fixed amount to
+// distribute once on a future date. The same daily cron runs due PENDING ones
+// (distributes across contributors by %) and marks them DONE. Distinct from the
+// single recurring PayoutSchedule above — this is an unbounded queue.
+model ScheduledPayout {
+  id             String                @id @default(cuid())
+  projectId      String
+  amount         BigInt                // fixed USDC, 6 decimals
+  runAt          DateTime
+  status         ScheduledPayoutStatus @default(PENDING)
+  distributionId String?               // set once executed
+  createdAt      DateTime              @default(now())
+  ranAt          DateTime?
+
+  project Project @relation(fields: [projectId], references: [id])
+
+  @@index([status, runAt])
+  @@map("scheduled_payouts")
+}
+
+enum ScheduledPayoutStatus {
+  PENDING
+  DONE
+  CANCELED
 }
 
 enum ScheduleFrequency {

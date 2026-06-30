@@ -114,6 +114,7 @@ Security: ReentrancyGuard, Ownable, Pausable, SafeERC20.
 - `transactions` — id, projectId, type (DEPOSIT/PAYMENT/DISTRIBUTION), amount, txHash, blockNumber, timestamp, fromAddress, toAddress, role
 - `treasury_deposits` — id, userId, source (CARD/CRYPTO), amount (USDC 6 dec), status (PENDING/CONFIRMED/FAILED), stripeSessionId (uniq), txHash (uniq), confirmedAt. Баланс трежери = сумма CONFIRMED.
 - `payout_schedules` — id, projectId (uniq, 1 расписание/проект), frequency (WEEKLY/MONTHLY/CUSTOM), amount (фикс USDC 6 dec за запуск), nextRunAt, active, lastRunAt. Авто-выплаты (см. ниже).
+- `scheduled_payouts` — id, projectId (много на проект), amount (фикс USDC 6 dec), runAt, status (PENDING/DONE/CANCELED), distributionId (после запуска), ranAt. Очередь разовых отложенных выплат.
 
 ## Invite-link flow (контрибьюторы) ✅
 Owner на дашборде («Edit Contributors» → «Invite by Link») создаёт слот роль+% без кошелька → `POST /api/invite` отдаёт `inviteToken` → ссылка `/invite/[token]`. Участник логинится через Privy и привязывает свой кошелёк (`POST /api/invite/[token]`). Owner видит подтверждение (бейдж + баннер), добавляет в список и пересчитывает % до 100, затем `replaceContributors` (on-chain). Owner НЕ видит связку личность↔адрес (адрес on-chain публичен всегда, скрыта именно личность). `DELETE /api/invite/[token]` — отзыв неклеймнутого. API: `frontend/app/api/invite/`, UI: `app/invite/[token]/page.tsx` + `components/ContributorsEditor.tsx`.
@@ -133,6 +134,11 @@ Owner на странице проекта задаёт **фиксированн
 - Cron-runner `app/api/treasury/schedule/run/route.ts` (GET): берёт active && nextRunAt ≤ now, на каждом запускает `runDistribution`, затем WEEKLY/MONTHLY → продвигает `nextRunAt` (от запланированной даты, перепрыгивая пропущенные интервалы), CUSTOM → `active=false`. Недостаток баланса (`DistributionError`) → расписание не трогаем, ретрай на следующий день. Опц. защита `CRON_SECRET` (Bearer).
 - `vercel.json`: добавлен дневной крон `0 4 * * *` (Hobby: 2 крона макс — это второй после sync).
 - UI: `components/AutoPayoutRow.tsx`, встроен в `DbProjectDashboard` под блоком Distribute (owner + есть контрибьюторы).
+
+### Разовые отложенные выплаты (one-off queue) ✅
+Помимо одного recurring-расписания, owner может поставить **сколько угодно** разовых выплат (сумма + дата). Модель `scheduled_payouts` (много на проект). Тот же cron `…/schedule/run` после recurring проходит по `status=PENDING && runAt ≤ now`, делает `runDistribution`, помечает DONE (+ `distributionId`, `ranAt`). Нехватка баланса → остаётся PENDING, ретрай завтра.
+- API `app/api/treasury/payments/route.ts`: GET (список по проекту), POST ({amount, runAt} → ставит в очередь), DELETE (?id= → отменяет только PENDING → CANCELED). Owner-only.
+- UI: `components/ScheduledPayoutsRow.tsx` — список выплат со статусами + «Schedule a payout» + Cancel, под `AutoPayoutRow` в `DbProjectDashboard`.
 - Env (в Vercel Production ✅): `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_TREASURY_ADDRESS`, `EXECUTOR_PRIVATE_KEY`. Без ключей — 503, UI не падает.
 - ⚠️ Executor-кошелёк (`0xf89f…7A56`, см. memory) должен реально держать USDC (фаусет): card-пополнение кредитит только БД, on-chain USDC туда не поступает. Распределение — чисто БД; реальный USDC уходит только при claim.
 - 🗑️ Старый on-chain allocate в SplitVault (`/api/treasury/allocate`, `Allocation` модель, `TreasuryAllocateRow`) удалён — заменён кастодиальным distribute. Старый `/balance` редиректит на `/treasury`.
