@@ -7,6 +7,8 @@ type InviteInfo = {
   projectName: string;
   role: string;
   percentage: number;
+  fixedAmount: string | null;
+  splitMode: "PERCENTAGE" | "FIXED";
   status: "PENDING" | "CLAIMED";
 };
 
@@ -110,7 +112,11 @@ export default function InvitePage({ params }: { params: { token: string } }) {
           <p className="text-sm text-gray-500">Role</p>
           <p className="font-medium text-gray-900">{invite.role}</p>
           <p className="text-sm text-gray-500 mt-2">Share</p>
-          <p className="font-medium text-gray-900">{(invite.percentage / 100).toFixed(2)}%</p>
+          <p className="font-medium text-gray-900">
+            {invite.splitMode === "FIXED" && invite.fixedAmount != null
+              ? `${(Number(invite.fixedAmount) / 1e6).toFixed(2)} USDC per payout`
+              : `${(invite.percentage / 100).toFixed(2)}%`}
+          </p>
         </div>
 
         {!ready ? (
