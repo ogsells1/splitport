@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { formatUnits } from "viem";
 import { AutoPayoutRow } from "./AutoPayoutRow";
 import { ScheduledPayoutsRow } from "./ScheduledPayoutsRow";
+import { StreamRow } from "./StreamRow";
 
 interface Contributor {
   id: string;
@@ -350,6 +351,10 @@ export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboard
 
       {isOwner && contributors.length > 0 && (
         <ScheduledPayoutsRow address={address} ownerPrivyId={ownerPrivyId} />
+      )}
+
+      {isOwner && contributors.length > 0 && (
+        <StreamRow address={address} ownerPrivyId={ownerPrivyId} />
       )}
     </div>
   );

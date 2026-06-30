@@ -115,6 +115,9 @@ Security: ReentrancyGuard, Ownable, Pausable, SafeERC20.
 - `treasury_deposits` — id, userId, source (CARD/CRYPTO), amount (USDC 6 dec), status (PENDING/CONFIRMED/FAILED), stripeSessionId (uniq), txHash (uniq), confirmedAt. Баланс трежери = сумма CONFIRMED.
 - `payout_schedules` — id, projectId (uniq, 1 расписание/проект), frequency (WEEKLY/MONTHLY/CUSTOM), amount (фикс USDC 6 dec за запуск), nextRunAt, active, lastRunAt. Авто-выплаты (см. ниже).
 - `scheduled_payouts` — id, projectId (много на проект), amount (фикс USDC 6 dec), runAt, status (PENDING/DONE/CANCELED), distributionId (после запуска), ranAt. Очередь разовых отложенных выплат.
+- `payout_streams` — id, projectId, total (USDC 6 dec), startAt, endAt, status (ACTIVE/CANCELED), canceledAt. Superfluid-style поток.
+- `stream_shares` — id, streamId, contributorId, wallet (null до клейма инвайта), amount (полная доля за окно), claimedAmount. Доля контрибьютора в потоке.
+- `stream_claims` — id, shareId, amount (накопленное, забранное за раз), netAmount, feeAmount, txHash (uniq), claimedAt. История клеймов потока.
 
 ## Invite-link flow (контрибьюторы) ✅
 Owner на дашборде («Edit Contributors» → «Invite by Link») создаёт слот роль+% без кошелька → `POST /api/invite` отдаёт `inviteToken` → ссылка `/invite/[token]`. Участник логинится через Privy и привязывает свой кошелёк (`POST /api/invite/[token]`). Owner видит подтверждение (бейдж + баннер), добавляет в список и пересчитывает % до 100, затем `replaceContributors` (on-chain). Owner НЕ видит связку личность↔адрес (адрес on-chain публичен всегда, скрыта именно личность). `DELETE /api/invite/[token]` — отзыв неклеймнутого. API: `frontend/app/api/invite/`, UI: `app/invite/[token]/page.tsx` + `components/ContributorsEditor.tsx`.
@@ -139,6 +142,16 @@ Owner на странице проекта задаёт **фиксированн
 Помимо одного recurring-расписания, owner может поставить **сколько угодно** разовых выплат (сумма + дата). Модель `scheduled_payouts` (много на проект). Тот же cron `…/schedule/run` после recurring проходит по `status=PENDING && runAt ≤ now`, делает `runDistribution`, помечает DONE (+ `distributionId`, `ranAt`). Нехватка баланса → остаётся PENDING, ретрай завтра.
 - API `app/api/treasury/payments/route.ts`: GET (список по проекту), POST ({amount, runAt} → ставит в очередь), DELETE (?id= → отменяет только PENDING → CANCELED). Owner-only.
 - UI: `components/ScheduledPayoutsRow.tsx` — список выплат со статусами + «Schedule a payout» + Cancel, под `AutoPayoutRow` в `DbProjectDashboard`.
+
+### Стриминговые выплаты (Superfluid-style) ✅
+Owner коммитит `total` USDC на окно `[startAt, endAt]`; доля каждого контрибьютора **копится линейно по секундам** (accrued = share × прошедшая доля времени), получатель забирает накопленное-минус-забранное в кабинете в любой момент. Накопление считается **на чтение**, без cron.
+- **Учёт баланса централизован** в `lib/treasuryBalance.ts` (`getAvailableBalance(ownerId)`): `available = Σ CONFIRMED deposits − Σ Distribution.total − Σ stream commitment`. Stream commitment: ACTIVE → весь `total` (резерв-буфер вперёд, как Superfluid); CANCELED → только `Σ claimedAmount` (незабранный остаток возвращается). Используется в treasury GET, `lib/distribute.ts`, создании потока.
+- `lib/stream.ts` — `accruedAmount(amount,start,end,asOf)` (clamp 0..amount, integer math по мс), `claimableNow(share,stream,asOf)` (CANCELED → 0).
+- API `app/api/treasury/streams/route.ts`: GET (список + accrued/claimed), POST (total+окно → резерв всей суммы, split по bps, dust остаётся; требует % = 100 и достаточный баланс), DELETE (cancel: status=CANCELED, остаток возвращается). Owner-only.
+- **Кабинет**: `GET /api/cabinet` теперь отдаёт `claimable = pending payouts + Σ stream claimableNow` и массив `streams`. `POST /api/cabinet/claim` собирает payout'ы И накопленное из потоков в **один transfer**; на успех инкрементит `streamShare.claimedAmount` + пишет `StreamClaim` (snapshot accrued на момент claim, чтобы не забрать больше начисленного). Комиссия делится пропорционально по всем claim'ам.
+- **Pending-инвайты**: при привязке кошелька (`POST /api/invite/[token]`) кошелёк проставляется и в `stream_shares` (как в payout'ах), доля становится claimable.
+- UI: owner — `components/StreamRow.tsx` (создание потока, прогресс-бар accrued/total, Cancel; авто-poll 15с), встроен в `DbProjectDashboard`. Контрибьютор — блок «Streaming in» в `app/cabinet/page.tsx` (живой прогресс, +claimable; poll 8с).
+- ⚠️ Отмена = «целиком»: незабранное (даже уже накопленное) возвращается в трежери, claimable потока → 0.
 - Env (в Vercel Production ✅): `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_TREASURY_ADDRESS`, `EXECUTOR_PRIVATE_KEY`. Без ключей — 503, UI не падает.
 - ⚠️ Executor-кошелёк (`0xf89f…7A56`, см. memory) должен реально держать USDC (фаусет): card-пополнение кредитит только БД, on-chain USDC туда не поступает. Распределение — чисто БД; реальный USDC уходит только при claim.
 - 🗑️ Старый on-chain allocate в SplitVault (`/api/treasury/allocate`, `Allocation` модель, `TreasuryAllocateRow`) удалён — заменён кастодиальным distribute. Старый `/balance` редиректит на `/treasury`.

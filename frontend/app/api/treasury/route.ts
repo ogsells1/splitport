@@ -3,6 +3,7 @@
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getAvailableBalance } from "@/lib/treasuryBalance";
 
 export async function GET(request: Request) {
   try {
@@ -33,11 +34,8 @@ export async function GET(request: Request) {
       }),
     ]);
 
-    const confirmed = deposits
-      .filter((d) => d.status === "CONFIRMED")
-      .reduce((sum, d) => sum + d.amount, 0n);
-    const distributed = distributions.reduce((sum, d) => sum + d.total, 0n);
-    const balance = confirmed - distributed;
+    // Available balance also reserves active stream buffers (see treasuryBalance).
+    const balance = await getAvailableBalance(user.id);
 
     return NextResponse.json({
       balance: balance.toString(),

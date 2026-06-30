@@ -1,14 +1,16 @@
 // frontend/app/api/cabinet/claim/route.ts
-// POST /api/cabinet/claim — a contributor claims all their pending payouts.
-// The executor wallet sends (total − transfer fee) USDC to the contributor's
-// wallet in a single transfer and pays the gas; the fee is deducted from the
-// contributor's share, so they cover the transfer cost out of their own money.
+// POST /api/cabinet/claim — a contributor claims everything owed: pending lump-sum
+// payouts plus accrued-but-unclaimed stream funds. The executor wallet sends
+// (total − transfer fee) USDC in a single transfer and pays the gas; the fee is
+// deducted from the contributor's share, so they cover the transfer cost out of
+// their own money.
 
 import { NextResponse } from "next/server";
 import { getAddress, isAddress, type Address } from "viem";
 import { prisma } from "@/lib/prisma";
 import { getExecutor } from "@/lib/executor";
 import { USDC_ADDRESS, USDC_ABI } from "@/lib/contract";
+import { claimableNow } from "@/lib/stream";
 
 export async function POST(request: Request) {
   try {
@@ -27,14 +29,27 @@ export async function POST(request: Request) {
     }
 
     const walletLc = wallet.toLowerCase();
-    const pending = await prisma.payout.findMany({
-      where: { wallet: walletLc, status: "PENDING" },
-    });
-    if (pending.length === 0) {
+    const now = new Date();
+    const [pending, shares] = await Promise.all([
+      prisma.payout.findMany({ where: { wallet: walletLc, status: "PENDING" } }),
+      prisma.streamShare.findMany({
+        where: { wallet: walletLc },
+        include: { stream: true },
+      }),
+    ]);
+
+    // Snapshot the accrued-but-unclaimed amount per stream share at `now`; we claim
+    // exactly this snapshot so we never pull more than what has accrued.
+    const streamClaims = shares
+      .map((sh) => ({ share: sh, amount: claimableNow(sh, sh.stream, now) }))
+      .filter((c) => c.amount > 0n);
+
+    const grossPayouts = pending.reduce((s, p) => s + p.amount, 0n);
+    const grossStreams = streamClaims.reduce((s, c) => s + c.amount, 0n);
+    const gross = grossPayouts + grossStreams;
+    if (gross === 0n) {
       return NextResponse.json({ error: "Nothing to claim" }, { status: 400 });
     }
-
-    const gross = pending.reduce((s, p) => s + p.amount, 0n);
 
     const { walletClient, publicClient, account } = executor;
     const usdc = getAddress(USDC_ADDRESS) as Address;
@@ -93,23 +108,46 @@ export async function POST(request: Request) {
     });
     await publicClient.waitForTransactionReceipt({ hash: txHash });
 
-    // Mark all claimed payouts. The full tx hash goes on the first; the rest get
-    // a synthetic suffix to satisfy the unique constraint while staying traceable.
-    await prisma.$transaction(
-      pending.map((p, i) =>
-        prisma.payout.update({
+    // Record everything claimed. The full tx hash goes on the first row; the rest
+    // get a synthetic suffix to satisfy the unique constraint while staying
+    // traceable. The fee/net is split proportionally across all claimed amounts.
+    const claimedAt = new Date();
+    await prisma.$transaction(async (tx) => {
+      let i = 0;
+      for (const p of pending) {
+        const feeShare = (fee * p.amount) / gross;
+        await tx.payout.update({
           where: { id: p.id },
           data: {
             status: "CLAIMED",
             txHash: i === 0 ? txHash : `${txHash}-${i}`,
-            // Distribute the fee/net proportionally for record-keeping.
-            feeAmount: (fee * p.amount) / gross,
-            netAmount: p.amount - (fee * p.amount) / gross,
-            claimedAt: new Date(),
+            feeAmount: feeShare,
+            netAmount: p.amount - feeShare,
+            claimedAt,
           },
-        })
-      )
-    );
+        });
+        i++;
+      }
+      for (const c of streamClaims) {
+        const feeShare = (fee * c.amount) / gross;
+        // Advance how much of the share has been pulled, and log the drip.
+        await tx.streamShare.update({
+          where: { id: c.share.id },
+          data: { claimedAmount: c.share.claimedAmount + c.amount },
+        });
+        await tx.streamClaim.create({
+          data: {
+            shareId: c.share.id,
+            amount: c.amount,
+            feeAmount: feeShare,
+            netAmount: c.amount - feeShare,
+            txHash: i === 0 ? txHash : `${txHash}-${i}`,
+            claimedAt,
+          },
+        });
+        i++;
+      }
+    });
 
     return NextResponse.json({
       txHash,

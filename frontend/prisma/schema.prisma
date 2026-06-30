@@ -39,6 +39,7 @@ model Project {
   payouts          Payout[]
   schedule         PayoutSchedule?
   scheduledPayouts ScheduledPayout[]
+  streams          PayoutStream[]
 
   @@map("projects")
 }
@@ -96,6 +97,69 @@ enum ScheduleFrequency {
   CUSTOM
 }
 
+// Superfluid-style continuous payout. The owner commits `total` USDC over a time
+// window [startAt, endAt]; each contributor's share accrues linearly and is
+// claimable at any moment (accrued − alreadyClaimed). Accrual is computed on read
+// (no cron). The full total is reserved from the treasury upfront (buffer); on
+// cancel, accrual stops and the unclaimed remainder returns to the treasury.
+model PayoutStream {
+  id         String       @id @default(cuid())
+  projectId  String
+  total      BigInt       // total USDC over the window, 6 decimals
+  startAt    DateTime
+  endAt      DateTime
+  status     StreamStatus @default(ACTIVE)
+  canceledAt DateTime?
+  createdAt  DateTime     @default(now())
+
+  project Project       @relation(fields: [projectId], references: [id])
+  shares  StreamShare[]
+
+  @@index([status])
+  @@map("payout_streams")
+}
+
+enum StreamStatus {
+  ACTIVE
+  CANCELED
+}
+
+// A contributor's slice of a PayoutStream. `amount` is their full share over the
+// whole window (split by basis points at creation). `claimedAmount` tracks how
+// much they've already pulled. wallet is null while the invite is unclaimed.
+model StreamShare {
+  id            String  @id @default(cuid())
+  streamId      String
+  contributorId String?
+  wallet        String? // lowercased; null until the invite is linked
+  amount        BigInt  // this contributor's total share over the full window
+  claimedAmount BigInt  @default(0)
+
+  stream      PayoutStream  @relation(fields: [streamId], references: [id])
+  contributor Contributor?  @relation(fields: [contributorId], references: [id])
+  claims      StreamClaim[]
+
+  @@index([wallet])
+  @@index([contributorId])
+  @@map("stream_shares")
+}
+
+// One claim event against a stream share — the accrued amount pulled at a point
+// in time. Kept for cabinet history and tx traceability.
+model StreamClaim {
+  id        String   @id @default(cuid())
+  shareId   String
+  amount    BigInt   // gross accrued claimed this time
+  netAmount BigInt?
+  feeAmount BigInt?
+  txHash    String?  @unique
+  claimedAt DateTime @default(now())
+
+  share StreamShare @relation(fields: [shareId], references: [id])
+
+  @@map("stream_claims")
+}
+
 model Contributor {
   id         String  @id @default(cuid())
   projectId  String
@@ -113,8 +177,9 @@ model Contributor {
   inviteToken      String?           @unique
   claimedByPrivyId String?
 
-  project Project  @relation(fields: [projectId], references: [id])
-  payouts Payout[]
+  project      Project       @relation(fields: [projectId], references: [id])
+  payouts      Payout[]
+  streamShares StreamShare[]
 
   @@unique([projectId, wallet])
   @@map("contributors")
