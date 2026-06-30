@@ -7,6 +7,7 @@
 
 import { formatUnits } from "viem";
 import { prisma } from "@/lib/prisma";
+import { getAvailableBalance } from "@/lib/treasuryBalance";
 
 export class DistributionError extends Error {
   status: number;
@@ -63,15 +64,9 @@ export async function runDistribution(opts: {
     );
   }
 
-  // Treasury balance: confirmed deposits − already distributed.
+  // Treasury balance: confirmed deposits − lump-sum distributions − stream buffers.
   const owner = project.owner;
-  const [deposits, distributions] = await Promise.all([
-    prisma.treasuryDeposit.findMany({ where: { userId: owner.id, status: "CONFIRMED" } }),
-    prisma.distribution.findMany({ where: { project: { ownerId: owner.id } } }),
-  ]);
-  const deposited = deposits.reduce((s, d) => s + d.amount, 0n);
-  const distributed = distributions.reduce((s, d) => s + d.total, 0n);
-  const available = deposited - distributed;
+  const available = await getAvailableBalance(owner.id);
 
   if (amountUsdc > available) {
     throw new DistributionError(

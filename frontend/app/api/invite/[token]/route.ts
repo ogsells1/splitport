@@ -81,10 +81,14 @@ export async function POST(
       },
     });
 
-    // Reserved payouts created before this invite was claimed now become
-    // claimable: attach the linked wallet so they show up in the cabinet.
+    // Reserved payouts and stream shares created before this invite was claimed
+    // now become claimable: attach the linked wallet so they show up in the cabinet.
     await prisma.payout.updateMany({
       where: { contributorId: contributor.id, wallet: null, status: "PENDING" },
+      data: { wallet: wallet.toLowerCase() },
+    });
+    await prisma.streamShare.updateMany({
+      where: { contributorId: contributor.id, wallet: null },
       data: { wallet: wallet.toLowerCase() },
     });
 

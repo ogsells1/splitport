@@ -25,12 +25,25 @@ interface PayoutItem {
   claimedAt: string | null;
 }
 
+interface StreamItem {
+  id: string;
+  projectName: string;
+  total: string;
+  accrued: string;
+  claimed: string;
+  claimable: string;
+  startAt: string;
+  endAt: string;
+  status: "ACTIVE" | "CANCELED";
+}
+
 export default function CabinetPage() {
   const { ready, authenticated, login, logout, user } = usePrivy();
   const { wallets } = useWallets();
 
   const [claimable, setClaimable] = useState<bigint>(0n);
   const [payouts, setPayouts] = useState<PayoutItem[]>([]);
+  const [streams, setStreams] = useState<StreamItem[]>([]);
   const [claiming, setClaiming] = useState(false);
   const [error, setError] = useState("");
   const [banner, setBanner] = useState("");
@@ -73,6 +86,7 @@ export default function CabinetPage() {
       if (res.ok) {
         setClaimable(BigInt(data.claimable ?? "0"));
         setPayouts(data.payouts ?? []);
+        setStreams(data.streams ?? []);
       }
     } catch {}
   }
@@ -203,6 +217,43 @@ export default function CabinetPage() {
               : `Claim ${claimableFormatted} USDC`}
           </button>
         </div>
+
+        {streams.filter((s) => s.status === "ACTIVE").length > 0 && (
+          <div className="bg-white border border-gray-200 rounded-2xl p-5 space-y-3">
+            <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Streaming in</p>
+            {streams
+              .filter((s) => s.status === "ACTIVE")
+              .map((s) => {
+                const total = BigInt(s.total);
+                const accrued = BigInt(s.accrued);
+                const pct = total > 0n ? Number((accrued * 10000n) / total) / 100 : 0;
+                return (
+                  <div key={s.id} className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium text-gray-800">{s.projectName}</p>
+                      <p className="text-sm font-semibold text-indigo-600">
+                        +{parseFloat(formatUnits(BigInt(s.claimable), 6)).toFixed(2)} USDC
+                      </p>
+                    </div>
+                    <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-indigo-500 rounded-full transition-all"
+                        style={{ width: `${Math.min(pct, 100)}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-gray-400">
+                      {parseFloat(formatUnits(accrued, 6)).toFixed(2)} of{" "}
+                      {parseFloat(formatUnits(total, 6)).toFixed(2)} USDC accrued · until{" "}
+                      {new Date(s.endAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                );
+              })}
+            <p className="text-xs text-gray-400">
+              This keeps growing every second. Claim anytime — it&apos;s included in your total above.
+            </p>
+          </div>
+        )}
 
         <div className="bg-white border border-gray-200 rounded-2xl p-5 space-y-3">
           <div>
