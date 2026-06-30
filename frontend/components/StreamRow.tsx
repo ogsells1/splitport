@@ -20,11 +20,19 @@ interface Stream {
   status: StreamStatus;
 }
 
+interface ContributorLite {
+  id: string;
+  role: string;
+  wallet: string | null;
+  fixedAmount: string | null;
+}
+
 interface StreamRowProps {
   address: string;
   ownerPrivyId: string;
   splitMode?: "PERCENTAGE" | "FIXED";
   fixedTotal?: string; // USDC 6 dec, sum of fixed amounts (FIXED mode)
+  contributors?: ContributorLite[];
 }
 
 function fmtDate(iso: string) {
@@ -39,7 +47,7 @@ function usdc(v: string) {
   return parseFloat(formatUnits(BigInt(v), 6)).toFixed(2);
 }
 
-export function StreamRow({ address, ownerPrivyId, splitMode = "PERCENTAGE", fixedTotal = "0" }: StreamRowProps) {
+export function StreamRow({ address, ownerPrivyId, splitMode = "PERCENTAGE", fixedTotal = "0", contributors = [] }: StreamRowProps) {
   const isFixed = splitMode === "FIXED";
   const [streams, setStreams] = useState<Stream[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,8 +56,25 @@ export function StreamRow({ address, ownerPrivyId, splitMode = "PERCENTAGE", fix
   const [total, setTotal] = useState("");
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
+  // FIXED: stream all participants by default, or only the ticked ones.
+  const streamIds = selected.size > 0 ? Array.from(selected) : undefined;
+  const streamSum = isFixed
+    ? (selected.size > 0
+        ? contributors.filter((c) => selected.has(c.id)).reduce((s, c) => s + BigInt(c.fixedAmount ?? "0"), 0n)
+        : BigInt(fixedTotal)
+      ).toString()
+    : fixedTotal;
+  function toggle(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
 
   const load = useCallback(async () => {
     if (!ownerPrivyId) return;
@@ -102,6 +127,7 @@ export function StreamRow({ address, ownerPrivyId, splitMode = "PERCENTAGE", fix
           total: amt,
           startAt: start ? new Date(start).toISOString() : undefined,
           endAt: new Date(end).toISOString(),
+          contributorIds: isFixed ? streamIds : undefined,
         }),
       });
       const data = await res.json();
@@ -109,6 +135,7 @@ export function StreamRow({ address, ownerPrivyId, splitMode = "PERCENTAGE", fix
       setTotal("");
       setStart("");
       setEnd("");
+      setSelected(new Set());
       setAdding(false);
       await load();
     } catch (e: any) {
@@ -192,10 +219,36 @@ export function StreamRow({ address, ownerPrivyId, splitMode = "PERCENTAGE", fix
       {adding ? (
         <div className="space-y-3 pt-1">
           {isFixed ? (
-            <div className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2.5">
-              Streams the sum of contributors&apos; fixed amounts —{" "}
-              <span className="font-medium text-gray-700">{usdc(fixedTotal)} USDC</span> total over
-              the window.
+            <div className="space-y-2">
+              {contributors.length > 0 && (
+                <div className="border border-gray-200 rounded-lg divide-y divide-gray-100">
+                  {contributors.map((c) => (
+                    <label
+                      key={c.id}
+                      className="flex items-center justify-between gap-2 px-3 py-2 cursor-pointer"
+                    >
+                      <span className="flex items-center gap-2 min-w-0">
+                        <input
+                          type="checkbox"
+                          checked={selected.has(c.id)}
+                          onChange={() => toggle(c.id)}
+                          className="w-4 h-4 accent-indigo-600 shrink-0"
+                        />
+                        <span className="text-sm text-gray-700 truncate">{c.role}</span>
+                      </span>
+                      <span className="text-sm text-gray-500">
+                        {usdc(c.fixedAmount ?? "0")} USDC
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              )}
+              <div className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2.5">
+                Streams{" "}
+                <span className="font-medium text-gray-700">{usdc(streamSum)} USDC</span> over the
+                window — {selected.size > 0 ? `${selected.size} selected` : "all participants"} by
+                their fixed amount.
+              </div>
             </div>
           ) : (
             <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden focus-within:border-indigo-400">
@@ -258,7 +311,8 @@ export function StreamRow({ address, ownerPrivyId, splitMode = "PERCENTAGE", fix
       )}
       <p className="text-xs text-gray-400">
         The full total is reserved from the treasury upfront and accrues by the second across
-        contributors by their %. Canceling returns the unclaimed remainder.
+        contributors {isFixed ? "by their fixed amount" : "by their %"}. Canceling returns the
+        unclaimed remainder.
       </p>
     </div>
   );

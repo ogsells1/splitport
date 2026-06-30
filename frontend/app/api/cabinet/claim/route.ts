@@ -6,7 +6,7 @@
 // their own money.
 
 import { NextResponse } from "next/server";
-import { getAddress, isAddress, type Address } from "viem";
+import { getAddress, isAddress, formatUnits, type Address } from "viem";
 import { prisma } from "@/lib/prisma";
 import { getExecutor } from "@/lib/executor";
 import { USDC_ADDRESS, USDC_ABI } from "@/lib/contract";
@@ -55,6 +55,27 @@ export async function POST(request: Request) {
     const usdc = getAddress(USDC_ADDRESS) as Address;
     const to = getAddress(wallet) as Address;
 
+    // Check the executor's on-chain USDC up front. A `transfer` of more than it
+    // holds reverts, which would otherwise make gas estimation fail with a
+    // confusing "could not estimate fee" error — so report underfunding clearly.
+    const onChainBalance = (await publicClient.readContract({
+      address: usdc,
+      abi: USDC_ABI,
+      functionName: "balanceOf",
+      args: [account.address],
+    })) as bigint;
+    if (onChainBalance < gross) {
+      return NextResponse.json(
+        {
+          error: `Payout wallet doesn't hold enough USDC to cover this claim yet (needs ${formatUnits(
+            gross,
+            6
+          )}, has ${formatUnits(onChainBalance, 6)}). Top it up and try again.`,
+        },
+        { status: 409 }
+      );
+    }
+
     // Estimate the transfer fee (gas in USDC on Arc) and deduct it from the payout.
     let fee: bigint;
     try {
@@ -85,20 +106,6 @@ export async function POST(request: Request) {
       );
     }
     const net = gross - fee;
-
-    // Executor must actually hold enough USDC on-chain to pay out + gas.
-    const onChainBalance = (await publicClient.readContract({
-      address: usdc,
-      abi: USDC_ABI,
-      functionName: "balanceOf",
-      args: [account.address],
-    })) as bigint;
-    if (onChainBalance < net) {
-      return NextResponse.json(
-        { error: "Payout wallet is temporarily underfunded. Please try again later." },
-        { status: 409 }
-      );
-    }
 
     const txHash = await walletClient.writeContract({
       address: usdc,

@@ -121,6 +121,7 @@ Security: ReentrancyGuard, Ownable, Pausable, SafeERC20.
 
 ## Invite-link flow (контрибьюторы) ✅
 Owner на дашборде («Edit Contributors» → «Invite by Link») создаёт слот роль+% без кошелька → `POST /api/invite` отдаёт `inviteToken` → ссылка `/invite/[token]`. Участник логинится через Privy и привязывает свой кошелёк (`POST /api/invite/[token]`). Owner видит подтверждение (бейдж + баннер), добавляет в список и пересчитывает % до 100, затем `replaceContributors` (on-chain). Owner НЕ видит связку личность↔адрес (адрес on-chain публичен всегда, скрыта именно личность). `DELETE /api/invite/[token]` — отзыв неклеймнутого. API: `frontend/app/api/invite/`, UI: `app/invite/[token]/page.tsx` + `components/ContributorsEditor.tsx`.
+**Добавление по кошельку:** в форме «+ Add Contributor» на дашборде (`DbProjectDashboard`) есть тогглер **Invite link / Wallet**. В режиме Wallet `POST /api/invite` принимает `wallet` → создаёт контрибьютора сразу **CLAIMED** (без inviteToken), с проверкой валидности адреса и дубликата (409). Доля по режиму проекта (% или fixed). Без кошелька — обычный invite-флоу.
 
 ## Treasury + кабинет участника (полностью кастодиальная модель) ✅ задеплоено
 Цель: и owner, и участник могут НЕ знать web3. Поток: **owner пополняет трежери (карта/крипта) → распределяет по % → участник в своём кабинете жмёт Claim → executor шлёт USDC на его кошелёк**. Тестнет: 1 USD = 1 USDC. Баланс трежери = sum(CONFIRMED deposits) − sum(Distribution.total).
