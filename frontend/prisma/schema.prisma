@@ -29,6 +29,9 @@ model Project {
   chainId         Int      @default(5042002)
   deployBlock     BigInt?
   ownerId         String
+  // How payouts are computed: PERCENTAGE splits an input amount by basis points;
+  // FIXED pays each contributor their own fixed amount. Set at creation, immutable.
+  splitMode       SplitMode @default(PERCENTAGE)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -42,6 +45,11 @@ model Project {
   streams          PayoutStream[]
 
   @@map("projects")
+}
+
+enum SplitMode {
+  PERCENTAGE
+  FIXED
 }
 
 // Owner-configured automatic payouts. A daily cron distributes a fixed amount
@@ -164,7 +172,8 @@ model Contributor {
   id         String  @id @default(cuid())
   projectId  String
   wallet     String?
-  percentage Int
+  percentage Int     // basis points; used in PERCENTAGE projects (0 in FIXED)
+  fixedAmount BigInt? // USDC 6 dec per payout; used in FIXED projects
   role       String
   active     Boolean @default(true)
   totalPaid  BigInt  @default(0)
