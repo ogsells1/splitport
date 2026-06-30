@@ -1,16 +1,17 @@
 // frontend/app/api/invite/route.ts
-// POST /api/invite — owner creates a pending contributor slot (role+percentage, no wallet)
-// and gets back an inviteToken to share as a claim link.
+// POST /api/invite — owner adds a contributor to a project. Two ways:
+//   - by invite link: no wallet → creates a PENDING slot + inviteToken to share.
+//   - by wallet: a valid address → creates a CLAIMED contributor straight away.
 
 import { NextResponse } from "next/server";
 import { randomBytes } from "crypto";
-import { parseUnits } from "viem";
+import { parseUnits, isAddress } from "viem";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { ownerPrivyId, contractAddress, role, percentage, amount } = body;
+    const { ownerPrivyId, contractAddress, role, percentage, amount, wallet } = body;
 
     if (!ownerPrivyId || !contractAddress || !role) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -42,8 +43,35 @@ export async function POST(request: Request) {
       shareFields = { percentage, fixedAmount: null };
     }
 
-    const inviteToken = randomBytes(24).toString("base64url");
+    // Add directly by wallet → CLAIMED contributor, no invite link.
+    if (wallet != null && wallet !== "") {
+      if (!isAddress(wallet)) {
+        return NextResponse.json({ error: "Invalid wallet address" }, { status: 400 });
+      }
+      const walletLc = wallet.toLowerCase();
+      const duplicate = await prisma.contributor.findFirst({
+        where: { projectId: project.id, wallet: { equals: walletLc, mode: "insensitive" } },
+      });
+      if (duplicate) {
+        return NextResponse.json(
+          { error: "This wallet is already a contributor on this project" },
+          { status: 409 }
+        );
+      }
+      const contributor = await prisma.contributor.create({
+        data: {
+          projectId: project.id,
+          ...shareFields,
+          role: role.trim(),
+          wallet: walletLc,
+          status: "CLAIMED",
+        },
+      });
+      return NextResponse.json({ id: contributor.id, wallet: walletLc, status: "CLAIMED" });
+    }
 
+    // Otherwise, generate an invite link (PENDING slot).
+    const inviteToken = randomBytes(24).toString("base64url");
     const contributor = await prisma.contributor.create({
       data: {
         projectId: project.id,
