@@ -68,8 +68,8 @@ export class CustodialSettlement implements SettlementProvider {
 
     const grossPayouts = pending.reduce((s, p) => s + p.amount, 0n);
     const grossStreams = streamClaims.reduce((s, c) => s + c.amount, 0n);
-    const gross = grossPayouts + grossStreams;
-    if (gross === 0n) throw new Error("Nothing to claim");
+    const totalOwed = grossPayouts + grossStreams;
+    if (totalOwed === 0n) throw new Error("Nothing to claim");
 
     const { walletClient, publicClient, account } = executor;
     const usdc = getAddress(USDC_ADDRESS) as Address;
@@ -81,13 +81,51 @@ export class CustodialSettlement implements SettlementProvider {
       functionName: "balanceOf",
       args: [account.address],
     })) as bigint;
-    if (onChainBalance < gross) {
-      throw Object.assign(
-        new Error(
-          `Payout wallet doesn't hold enough USDC to cover this claim yet (needs ${formatUnits(gross, 6)}, has ${formatUnits(onChainBalance, 6)}). Top it up and try again.`
-        ),
-        { status: 409 }
-      );
+
+    // Partial claim: if the executor doesn't have enough for everything, greedily
+    // select full items (smallest first) that fit within the available balance.
+    // Remaining items stay PENDING for the next claim.
+    let selectedPayouts = pending;
+    let selectedStreams = streamClaims;
+    let gross = totalOwed;
+
+    if (onChainBalance < totalOwed) {
+      // Build a list of all claimable items sorted by amount ascending.
+      type Item =
+        | { kind: "payout"; data: (typeof pending)[number]; amount: bigint }
+        | { kind: "stream"; data: (typeof streamClaims)[number]; amount: bigint };
+
+      const items: Item[] = [
+        ...pending.map((p) => ({ kind: "payout" as const, data: p, amount: p.amount })),
+        ...streamClaims.map((c) => ({ kind: "stream" as const, data: c, amount: c.amount })),
+      ].sort((a, b) => (a.amount < b.amount ? -1 : 1));
+
+      let budget = onChainBalance;
+      const pickedPayouts: typeof pending = [];
+      const pickedStreams: typeof streamClaims = [];
+
+      for (const item of items) {
+        if (item.amount <= budget) {
+          budget -= item.amount;
+          if (item.kind === "payout") pickedPayouts.push(item.data);
+          else pickedStreams.push(item.data);
+        }
+      }
+
+      if (pickedPayouts.length === 0 && pickedStreams.length === 0) {
+        throw Object.assign(
+          new Error(
+            `Payout wallet balance (${formatUnits(onChainBalance, 6)} USDC) is too low to cover even the smallest pending item. Top it up and try again.`
+          ),
+          { status: 409 }
+        );
+      }
+
+      selectedPayouts = pickedPayouts;
+      selectedStreams = pickedStreams;
+      gross =
+        selectedPayouts.reduce((s, p) => s + p.amount, 0n) +
+        selectedStreams.reduce((s, c) => s + c.amount, 0n);
     }
 
     let fee: bigint;
@@ -123,7 +161,7 @@ export class CustodialSettlement implements SettlementProvider {
     const claimedAt = new Date();
     await prisma.$transaction(async (tx) => {
       let i = 0;
-      for (const p of pending) {
+      for (const p of selectedPayouts) {
         const feeShare = (fee * p.amount) / gross;
         await tx.payout.update({
           where: { id: p.id },
@@ -137,7 +175,7 @@ export class CustodialSettlement implements SettlementProvider {
         });
         i++;
       }
-      for (const c of streamClaims) {
+      for (const c of selectedStreams) {
         const feeShare = (fee * c.amount) / gross;
         await tx.streamShare.update({
           where: { id: c.share.id },
