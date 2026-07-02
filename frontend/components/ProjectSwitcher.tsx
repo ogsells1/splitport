@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { authedFetch } from "@/lib/apiClient";
 import { useRouter } from "next/navigation";
 
 interface ProjectSummary {
@@ -23,7 +24,7 @@ export function ProjectSwitcher({ ownerPrivyId, currentAddress }: ProjectSwitche
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetch(`/api/projects?ownerPrivyId=${encodeURIComponent(ownerPrivyId)}`)
+    authedFetch(`/api/projects?ownerPrivyId=${encodeURIComponent(ownerPrivyId)}`)
       .then((r) => r.json())
       .then((d) => setProjects(d.projects ?? []))
       .finally(() => setLoading(false));

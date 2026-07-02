@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { authedFetch } from "@/lib/apiClient";
 import { isAddress, type Address } from "viem";
 import { useWriteContract, useReadContract } from "wagmi";
 import { VAULT_ABI } from "@/lib/contract";
@@ -77,7 +78,7 @@ export function ContributorsEditor({ vaultAddress, walletAddress, ownerPrivyId }
 
   async function refreshInvites() {
     try {
-      const res = await fetch(`/api/project?contractAddress=${vaultAddress}`);
+      const res = await authedFetch(`/api/project?contractAddress=${vaultAddress}`);
       if (!res.ok) return;
       const data = await res.json();
       const onChainWallets = new Set((contributors ?? []).map((c) => c.wallet.toLowerCase()));
@@ -123,6 +124,7 @@ export function ContributorsEditor({ vaultAddress, walletAddress, ownerPrivyId }
     refreshInvites();
     const interval = setInterval(refreshInvites, open ? 6000 : 20000);
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, contributors, isOwner]);
 
   function applyClaimedToRows() {
@@ -164,7 +166,7 @@ export function ContributorsEditor({ vaultAddress, walletAddress, ownerPrivyId }
     }
     setCreatingInvite(true);
     try {
-      const res = await fetch("/api/invite", {
+      const res = await authedFetch("/api/invite", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -205,7 +207,7 @@ export function ContributorsEditor({ vaultAddress, walletAddress, ownerPrivyId }
           abi: VAULT_ABI,
           functionName: "distribute",
         });
-        fetch(`/api/transactions/sync?contractAddress=${vaultAddress}`, { method: "POST" }).catch(() => {});
+        authedFetch(`/api/transactions/sync?contractAddress=${vaultAddress}`, { method: "POST" }).catch(() => {});
       }
 
       setStep("replacing");
@@ -221,7 +223,7 @@ export function ContributorsEditor({ vaultAddress, walletAddress, ownerPrivyId }
       });
 
       setStep("syncing");
-      await fetch("/api/project", {
+      await authedFetch("/api/project", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -356,7 +358,7 @@ export function ContributorsEditor({ vaultAddress, walletAddress, ownerPrivyId }
               ))}
             </ul>
             <p className="text-xs text-emerald-700">
-              Add them to the list below, then adjust everyone's percentages back to 100% before saving.
+              Add them to the list below, then adjust everyone&apos;s percentages back to 100% before saving.
             </p>
             <button
               onClick={applyClaimedToRows}
@@ -391,7 +393,7 @@ export function ContributorsEditor({ vaultAddress, walletAddress, ownerPrivyId }
                   </button>
                   <button
                     onClick={async () => {
-                      await fetch(`/api/invite/${inv.inviteToken}?ownerPrivyId=${ownerPrivyId}`, {
+                      await authedFetch(`/api/invite/${inv.inviteToken}?ownerPrivyId=${ownerPrivyId}`, {
                         method: "DELETE",
                       });
                       refreshInvites();
@@ -483,7 +485,7 @@ export function ContributorsEditor({ vaultAddress, walletAddress, ownerPrivyId }
                   {creatingInvite ? "Generating..." : "Generate invite link"}
                 </button>
                 <p className="text-xs text-gray-400">
-                  This share is reserved until the link is claimed — it won't count toward the
+                  This share is reserved until the link is claimed — it won&apos;t count toward the
                   100% on-chain until then.
                 </p>
               </>

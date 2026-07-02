@@ -6,32 +6,38 @@
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireUser, authErrorResponse } from "@/lib/auth";
 
 export async function GET(request: Request) {
+  let requesterPrivyId: string;
+  try {
+    requesterPrivyId = await requireUser(request);
+  } catch (e) {
+    const { error, status } = authErrorResponse(e);
+    return NextResponse.json({ error }, { status });
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const contractAddress = searchParams.get("contractAddress");
-    const ownerPrivyId = searchParams.get("ownerPrivyId");
     const type = searchParams.get("type"); // "DEPOSIT" | "PAYMENT" | "DISTRIBUTION" | null
     const limit = Math.min(parseInt(searchParams.get("limit") ?? "50"), 200);
     const offset = parseInt(searchParams.get("offset") ?? "0");
 
-    if (!contractAddress && !ownerPrivyId) {
-      return NextResponse.json(
-        { error: "contractAddress or ownerPrivyId is required" },
-        { status: 400 }
-      );
-    }
+    // The caller can only see their own projects' transactions. A single-project
+    // filter (contractAddress) is scoped to projects they own.
+    const user = await prisma.user.findUnique({ where: { privyId: requesterPrivyId } });
+    if (!user) return NextResponse.json({ transactions: [], total: 0 });
 
     let projectIds: string[];
 
     if (contractAddress) {
       const project = await prisma.project.findUnique({ where: { contractAddress } });
-      if (!project) return NextResponse.json({ transactions: [], total: 0 });
+      if (!project || project.ownerId !== user.id) {
+        return NextResponse.json({ transactions: [], total: 0 });
+      }
       projectIds = [project.id];
     } else {
-      const user = await prisma.user.findUnique({ where: { privyId: ownerPrivyId! } });
-      if (!user) return NextResponse.json({ transactions: [], total: 0 });
       const projects = await prisma.project.findMany({
         where: { ownerId: user.id },
         select: { id: true },

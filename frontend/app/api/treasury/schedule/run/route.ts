@@ -11,15 +11,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { runDistribution, DistributionError } from "@/lib/distribute";
 import { advanceFrom, type Frequency } from "@/lib/schedule";
+import { isCronAuthorized } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
-  // If CRON_SECRET is configured, require it (Vercel sends it as a Bearer token).
-  const secret = process.env.CRON_SECRET;
-  if (secret) {
-    const auth = request.headers.get("authorization");
-    if (auth !== `Bearer ${secret}`) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  // Vercel Cron sends CRON_SECRET as a Bearer token. In production a missing
+  // secret fails closed (see isCronAuthorized).
+  if (!isCronAuthorized(request)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {

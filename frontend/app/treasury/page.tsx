@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
+import { authedFetch } from "@/lib/apiClient";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { useRouter, useSearchParams } from "next/navigation";
 import { formatUnits, parseUnits, getAddress, type Address } from "viem";
@@ -90,7 +91,7 @@ function TreasuryInner() {
   async function loadTreasury() {
     if (!user) return;
     try {
-      const res = await fetch(`/api/treasury?userPrivyId=${encodeURIComponent(user.id)}`);
+      const res = await authedFetch(`/api/treasury?userPrivyId=${encodeURIComponent(user.id)}`);
       const data = await res.json();
       setBalance(BigInt(data.balance ?? "0"));
       setDeposits(data.deposits ?? []);
@@ -103,11 +104,12 @@ function TreasuryInner() {
     loadTreasury();
     const interval = setInterval(loadTreasury, 8000);
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, authenticated, user]);
 
   useEffect(() => {
     if (!ready || !authenticated || !user) return;
-    fetch(`/api/projects?ownerPrivyId=${encodeURIComponent(user.id)}`)
+    authedFetch(`/api/projects?ownerPrivyId=${encodeURIComponent(user.id)}`)
       .then((r) => r.json())
       .then((d) => setProjects(d.projects ?? []))
       .catch(() => {});
@@ -118,7 +120,7 @@ function TreasuryInner() {
     if (!receipt || !pendingTx || !user) return;
     (async () => {
       try {
-        const res = await fetch("/api/treasury/deposit-crypto", {
+        const res = await authedFetch("/api/treasury/deposit-crypto", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ userPrivyId: user.id, txHash: pendingTx }),
@@ -147,7 +149,7 @@ function TreasuryInner() {
     }
     setCardBusy(true);
     try {
-      const res = await fetch("/api/treasury/checkout", {
+      const res = await authedFetch("/api/treasury/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userPrivyId: user!.id, amountUsd: amount }),
@@ -303,7 +305,7 @@ function TreasuryInner() {
               Distribute to a project
             </p>
             <p className="text-xs text-gray-400 mt-0.5">
-              Splits the amount across the project's contributors by their %. Each contributor then
+              Splits the amount across the project&apos;s contributors by their %. Each contributor then
               claims their share from their cabinet.
             </p>
           </div>

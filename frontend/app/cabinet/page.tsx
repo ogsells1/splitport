@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { authedFetch } from "@/lib/apiClient";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { formatUnits, type Address } from "viem";
 import { USDC_ADDRESS } from "@/lib/contract";
@@ -81,7 +82,7 @@ export default function CabinetPage() {
   async function loadCabinet() {
     if (!walletAddress) return;
     try {
-      const res = await fetch(`/api/cabinet?wallet=${walletAddress}`);
+      const res = await authedFetch(`/api/cabinet?wallet=${walletAddress}`);
       const data = await res.json();
       if (res.ok) {
         setClaimable(BigInt(data.claimable ?? "0"));
@@ -105,7 +106,7 @@ export default function CabinetPage() {
     setBanner("");
     setClaiming(true);
     try {
-      const res = await fetch("/api/cabinet/claim", {
+      const res = await authedFetch("/api/cabinet/claim", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ wallet: walletAddress }),
@@ -137,8 +138,8 @@ export default function CabinetPage() {
         <div className="w-full max-w-sm space-y-5 text-center">
           <h1 className="text-xl font-semibold text-gray-900">Your payouts</h1>
           <p className="text-sm text-gray-500">
-            Sign in to see what you've earned and send it to your wallet. No crypto experience
-            needed — we'll create a wallet for you automatically if you don't have one.
+            Sign in to see what you&apos;ve earned and send it to your wallet. No crypto experience
+            needed — we&apos;ll create a wallet for you automatically if you don&apos;t have one.
           </p>
           <button
             onClick={login}
@@ -168,7 +169,7 @@ export default function CabinetPage() {
         <div>
           <h1 className="text-xl font-semibold text-gray-900">Your cabinet</h1>
           <p className="text-sm text-gray-500 mt-1">
-            Money you've earned across projects, ready to send to your wallet.
+            Money you&apos;ve earned across projects, ready to send to your wallet.
           </p>
         </div>
 

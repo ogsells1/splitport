@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { authedFetch } from "@/lib/apiClient";
 
 interface TreasuryDistributeRowProps {
   name: string;
@@ -29,7 +30,7 @@ export function TreasuryDistributeRow({
     setErrorMsg("");
     setStep("distributing");
     try {
-      const res = await fetch("/api/treasury/distribute", {
+      const res = await authedFetch("/api/treasury/distribute", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ownerPrivyId, contractAddress, amount: amountNum }),

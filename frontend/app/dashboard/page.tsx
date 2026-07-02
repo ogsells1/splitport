@@ -1,6 +1,7 @@
 "use client";
 
 import { usePrivy, useWallets } from "@privy-io/react-auth";
+import { authedFetch } from "@/lib/apiClient";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { formatUnits, type Address } from "viem";
@@ -29,7 +30,7 @@ export default function DashboardHub() {
 
   useEffect(() => {
     if (!ready || !authenticated || !user) return;
-    fetch(`/api/projects?ownerPrivyId=${encodeURIComponent(user.id)}`)
+    authedFetch(`/api/projects?ownerPrivyId=${encodeURIComponent(user.id)}`)
       .then((r) => r.json())
       .then((d) => setProjects(d.projects ?? []))
       .catch(() => {})
@@ -38,7 +39,7 @@ export default function DashboardHub() {
 
   useEffect(() => {
     if (!walletAddress) return;
-    fetch(`/api/cabinet?wallet=${walletAddress}`)
+    authedFetch(`/api/cabinet?wallet=${walletAddress}`)
       .then((r) => r.json())
       .then((d) => setClaimable(BigInt(d.claimable ?? "0")))
       .catch(() => {});
@@ -79,7 +80,7 @@ export default function DashboardHub() {
             <div>
               <p className="text-sm font-medium text-gray-900">Your cabinet</p>
               <p className="text-sm text-gray-500 mt-0.5">
-                Money you've earned as a contributor.
+                Money you&apos;ve earned as a contributor.
               </p>
             </div>
             <div className="text-right">

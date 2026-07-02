@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
+import { authedFetch } from "@/lib/apiClient";
 import { useRouter, useSearchParams } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
 import { formatUnits } from "viem";
@@ -300,7 +301,7 @@ function HistoryContent() {
   // Load the user's projects (for the filter dropdown)
   useEffect(() => {
     if (!ready || !authenticated || !user) return;
-    fetch(`/api/projects?ownerPrivyId=${encodeURIComponent(user.id)}`)
+    authedFetch(`/api/projects?ownerPrivyId=${encodeURIComponent(user.id)}`)
       .then((r) => r.json())
       .then((d) => setProjects(d.projects ?? []))
       .catch(() => {});
@@ -319,21 +320,21 @@ function HistoryContent() {
         if (projectFilter === "all") {
           await Promise.all(
             projects.map((p) =>
-              fetch(`/api/transactions/sync?contractAddress=${p.contractAddress}`, {
+              authedFetch(`/api/transactions/sync?contractAddress=${p.contractAddress}`, {
                 method: "POST",
               }).catch(() => {})
             )
           );
-          const res = await fetch(
+          const res = await authedFetch(
             `/api/transactions?ownerPrivyId=${encodeURIComponent(privyId)}&limit=200`
           );
           const data = await res.json();
           if (!cancelled) setTransactions(data.transactions ?? []);
         } else {
-          await fetch(`/api/transactions/sync?contractAddress=${projectFilter}`, {
+          await authedFetch(`/api/transactions/sync?contractAddress=${projectFilter}`, {
             method: "POST",
           }).catch(() => {});
-          const res = await fetch(
+          const res = await authedFetch(
             `/api/transactions?contractAddress=${projectFilter}&limit=200`
           );
           const data = await res.json();
@@ -351,6 +352,7 @@ function HistoryContent() {
       cancelled = true;
     };
     // projects.length guards against re-running before the project list arrives
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, authenticated, user, projectFilter, projects.length]);
 
   if (!ready || !authenticated) {

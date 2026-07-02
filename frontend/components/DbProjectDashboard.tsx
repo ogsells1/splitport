@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { authedFetch } from "@/lib/apiClient";
 import { formatUnits, isAddress } from "viem";
 import { AutoPayoutRow } from "./AutoPayoutRow";
 import { ScheduledPayoutsRow } from "./ScheduledPayoutsRow";
@@ -61,7 +62,7 @@ export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboard
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch(`/api/project?contractAddress=${address}`);
+      const res = await authedFetch(`/api/project?contractAddress=${address}`);
       const data = await res.json();
       if (res.ok) {
         setName(data.name);
@@ -78,7 +79,7 @@ export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboard
 
   useEffect(() => {
     if (!ownerPrivyId) return;
-    fetch(`/api/projects?ownerPrivyId=${encodeURIComponent(ownerPrivyId)}`)
+    authedFetch(`/api/projects?ownerPrivyId=${encodeURIComponent(ownerPrivyId)}`)
       .then((r) => r.json())
       .then((d) =>
         setIsOwner((d.projects ?? []).some((p: any) => p.contractAddress === address))
@@ -89,7 +90,7 @@ export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboard
   const loadTreasury = useCallback(async () => {
     if (!ownerPrivyId) return;
     try {
-      const res = await fetch(`/api/treasury?userPrivyId=${encodeURIComponent(ownerPrivyId)}`);
+      const res = await authedFetch(`/api/treasury?userPrivyId=${encodeURIComponent(ownerPrivyId)}`);
       const data = await res.json();
       if (res.ok) {
         setTreasuryBalance(BigInt(data.balance ?? "0"));
@@ -132,7 +133,7 @@ export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboard
   async function runDistribute(payload: { amount?: number; contributorIds?: string[] }) {
     setDistributing(true);
     try {
-      const res = await fetch("/api/treasury/distribute", {
+      const res = await authedFetch("/api/treasury/distribute", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ownerPrivyId, contractAddress: address, ...payload }),
@@ -161,7 +162,7 @@ export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboard
   async function saveAmount(contributorId: string) {
     const amt = parseFloat(editValue);
     if (!amt || amt <= 0) return;
-    await fetch("/api/contributor", {
+    await authedFetch("/api/contributor", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ownerPrivyId, contributorId, amount: amt }),
@@ -202,7 +203,7 @@ export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboard
     }
     setCreating(true);
     try {
-      const res = await fetch("/api/invite", {
+      const res = await authedFetch("/api/invite", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -223,7 +224,7 @@ export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboard
   }
 
   async function revoke(token: string) {
-    await fetch(`/api/invite/${token}?ownerPrivyId=${ownerPrivyId}`, { method: "DELETE" });
+    await authedFetch(`/api/invite/${token}?ownerPrivyId=${ownerPrivyId}`, { method: "DELETE" });
     load();
   }
 
@@ -545,7 +546,7 @@ export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboard
                 </button>
               </div>
               <p className="text-xs text-gray-400 mt-2">
-                Splits the amount across contributors by their %. Pending contributors' shares are
+                Splits the amount across contributors by their %. Pending contributors&apos; shares are
                 reserved until they accept their invite. Need funds?{" "}
                 <a href="/treasury" className="text-indigo-600 hover:underline">
                   Top up treasury

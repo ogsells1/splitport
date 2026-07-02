@@ -6,15 +6,24 @@
 import { NextResponse } from "next/server";
 import { parseUnits } from "viem";
 import { prisma } from "@/lib/prisma";
+import { requireUser, authErrorResponse } from "@/lib/auth";
 
 export async function PATCH(request: Request) {
+  let ownerPrivyId: string;
+  try {
+    ownerPrivyId = await requireUser(request);
+  } catch (e) {
+    const { error, status } = authErrorResponse(e);
+    return NextResponse.json({ error }, { status });
+  }
+
   try {
     const body = await request.json();
-    const { ownerPrivyId, contributorId, amount } = body;
+    const { contributorId, amount } = body;
 
-    if (!ownerPrivyId || !contributorId) {
+    if (!contributorId) {
       return NextResponse.json(
-        { error: "ownerPrivyId and contributorId are required" },
+        { error: "contributorId is required" },
         { status: 400 }
       );
     }

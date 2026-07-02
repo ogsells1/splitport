@@ -12,6 +12,7 @@ import { prisma } from "@/lib/prisma";
 import { getAvailableBalance } from "@/lib/treasuryBalance";
 import { accruedAmount } from "@/lib/stream";
 import { computeShares, DistributionError } from "@/lib/distribute";
+import { requireUser, authErrorResponse } from "@/lib/auth";
 
 async function ownedProject(contractAddress: string, ownerPrivyId: string) {
   const project = await prisma.project.findUnique({
@@ -26,13 +27,20 @@ async function ownedProject(contractAddress: string, ownerPrivyId: string) {
 }
 
 export async function GET(request: Request) {
+  let ownerPrivyId: string;
+  try {
+    ownerPrivyId = await requireUser(request);
+  } catch (e) {
+    const { error, status } = authErrorResponse(e);
+    return NextResponse.json({ error }, { status });
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const contractAddress = searchParams.get("contractAddress");
-    const ownerPrivyId = searchParams.get("ownerPrivyId");
-    if (!contractAddress || !ownerPrivyId) {
+    if (!contractAddress) {
       return NextResponse.json(
-        { error: "contractAddress and ownerPrivyId are required" },
+        { error: "contractAddress is required" },
         { status: 400 }
       );
     }
@@ -76,6 +84,14 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  let ownerPrivyId: string;
+  try {
+    ownerPrivyId = await requireUser(request);
+  } catch (e) {
+    const { error, status } = authErrorResponse(e);
+    return NextResponse.json({ error }, { status });
+  }
+
   try {
     // Streaming is custodial-only; vault (onchain) mode defers to a later phase.
     if (process.env.CUSTODY_MODE === "onchain") {
@@ -86,11 +102,11 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { ownerPrivyId, contractAddress, total, startAt, endAt, contributorIds } = body;
+    const { contractAddress, total, startAt, endAt, contributorIds } = body;
 
-    if (!ownerPrivyId || !contractAddress) {
+    if (!contractAddress) {
       return NextResponse.json(
-        { error: "ownerPrivyId and contractAddress are required" },
+        { error: "contractAddress is required" },
         { status: 400 }
       );
     }
@@ -177,12 +193,19 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  let ownerPrivyId: string;
+  try {
+    ownerPrivyId = await requireUser(request);
+  } catch (e) {
+    const { error, status } = authErrorResponse(e);
+    return NextResponse.json({ error }, { status });
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
-    const ownerPrivyId = searchParams.get("ownerPrivyId");
-    if (!id || !ownerPrivyId) {
-      return NextResponse.json({ error: "id and ownerPrivyId are required" }, { status: 400 });
+    if (!id) {
+      return NextResponse.json({ error: "id is required" }, { status: 400 });
     }
 
     const stream = await prisma.payoutStream.findUnique({
