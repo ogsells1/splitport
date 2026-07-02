@@ -25,7 +25,7 @@ export default function Dashboard() {
   if (!ready || !authenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-6 h-6 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -54,22 +54,22 @@ export default function Dashboard() {
     : null;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200 px-4 py-3">
+    <div className="min-h-screen bg-stone-50">
+      <header className="bg-white border-b border-stone-200 px-4 py-3">
         <div className="max-w-2xl mx-auto flex items-center justify-between gap-3">
           <ProjectSwitcher ownerPrivyId={user?.id ?? ""} currentAddress={vaultAddress} />
           <div className="flex items-center gap-3">
-            <a href="/treasury" className="text-sm text-gray-400 hover:text-gray-600 transition-colors">
+            <a href="/treasury" className="text-sm text-stone-400 hover:text-stone-600 transition-colors">
               Treasury
             </a>
             {shortAddress && (
-              <span className="text-sm text-gray-500 font-mono bg-gray-100 px-2 py-1 rounded-lg">
+              <span className="text-sm text-stone-500 font-mono bg-stone-100 px-2 py-1 rounded-lg">
                 {shortAddress}
               </span>
             )}
             <button
               onClick={logout}
-              className="text-sm text-gray-400 hover:text-gray-600 transition-colors"
+              className="text-sm text-stone-400 hover:text-stone-600 transition-colors"
             >
               Sign out
             </button>
@@ -97,7 +97,7 @@ export default function Dashboard() {
 
             <a
               href={`/history?project=${vaultAddress}`}
-              className="block w-full text-center text-sm text-gray-400 hover:text-gray-600 transition-colors py-2 border border-gray-200 rounded-xl bg-white"
+              className="block w-full text-center text-sm text-stone-400 hover:text-stone-600 transition-colors py-2 border border-stone-200 rounded-xl bg-white"
             >
               View Transaction History →
             </a>

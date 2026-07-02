@@ -155,22 +155,22 @@ export function StreamRow({ address, ownerPrivyId, splitMode = "PERCENTAGE", fix
   }
 
   if (loading) {
-    return <div className="h-24 bg-gray-100 rounded-2xl animate-pulse" />;
+    return <div className="h-24 bg-stone-100 rounded-2xl animate-pulse" />;
   }
 
   const activeCount = streams.filter((s) => s.status === "ACTIVE").length;
 
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-5 space-y-4">
+    <div className="bg-white border border-stone-200 rounded-2xl p-5 space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-xs text-gray-400 uppercase tracking-wide">Streaming payouts</p>
+        <p className="text-xs text-stone-400 uppercase tracking-wide">Streaming payouts</p>
         {activeCount > 0 && (
-          <span className="text-xs font-medium text-indigo-600">{activeCount} streaming</span>
+          <span className="text-xs font-medium text-emerald-700">{activeCount} streaming</span>
         )}
       </div>
 
       {streams.length === 0 ? (
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-stone-500">
           Drip a total amount to contributors continuously until a target date — they can pull
           what&apos;s accrued anytime.
         </p>
@@ -183,9 +183,9 @@ export function StreamRow({ address, ownerPrivyId, splitMode = "PERCENTAGE", fix
             return (
               <div key={s.id} className="space-y-1.5">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-sm font-medium text-gray-800">
+                  <p className="text-sm font-medium text-stone-800">
                     {usdc(s.total)} USDC
-                    <span className="text-xs text-gray-400 font-normal ml-1.5">
+                    <span className="text-xs text-stone-400 font-normal ml-1.5">
                       {fmtDate(s.startAt)} → {fmtDate(s.endAt)}
                     </span>
                   </p>
@@ -197,18 +197,18 @@ export function StreamRow({ address, ownerPrivyId, splitMode = "PERCENTAGE", fix
                       Cancel
                     </button>
                   ) : (
-                    <span className="text-xs text-gray-400">canceled</span>
+                    <span className="text-xs text-stone-400">canceled</span>
                   )}
                 </div>
-                <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                <div className="h-1.5 bg-stone-100 rounded-full overflow-hidden">
                   <div
                     className={`h-full rounded-full ${
-                      s.status === "ACTIVE" ? "bg-indigo-500" : "bg-gray-300"
+                      s.status === "ACTIVE" ? "bg-emerald-600" : "bg-stone-300"
                     }`}
                     style={{ width: `${Math.min(pct, 100)}%` }}
                   />
                 </div>
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-stone-400">
                   {usdc(s.accrued)} accrued · {usdc(s.claimed)} claimed
                 </p>
               </div>
@@ -222,7 +222,7 @@ export function StreamRow({ address, ownerPrivyId, splitMode = "PERCENTAGE", fix
           {isFixed ? (
             <div className="space-y-2">
               {contributors.length > 0 && (
-                <div className="border border-gray-200 rounded-lg divide-y divide-gray-100">
+                <div className="border border-stone-200 rounded-lg divide-y divide-stone-100">
                   {contributors.map((c) => (
                     <label
                       key={c.id}
@@ -233,26 +233,26 @@ export function StreamRow({ address, ownerPrivyId, splitMode = "PERCENTAGE", fix
                           type="checkbox"
                           checked={selected.has(c.id)}
                           onChange={() => toggle(c.id)}
-                          className="w-4 h-4 accent-indigo-600 shrink-0"
+                          className="w-4 h-4 accent-emerald-700 shrink-0"
                         />
-                        <span className="text-sm text-gray-700 truncate">{c.role}</span>
+                        <span className="text-sm text-stone-700 truncate">{c.role}</span>
                       </span>
-                      <span className="text-sm text-gray-500">
+                      <span className="text-sm text-stone-500">
                         {usdc(c.fixedAmount ?? "0")} USDC
                       </span>
                     </label>
                   ))}
                 </div>
               )}
-              <div className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2.5">
+              <div className="text-xs text-stone-500 bg-stone-50 rounded-lg px-3 py-2.5">
                 Streams{" "}
-                <span className="font-medium text-gray-700">{usdc(streamSum)} USDC</span> over the
+                <span className="font-medium text-stone-700">{usdc(streamSum)} USDC</span> over the
                 window — {selected.size > 0 ? `${selected.size} selected` : "all participants"} by
                 their fixed amount.
               </div>
             </div>
           ) : (
-            <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden focus-within:border-indigo-400">
+            <div className="flex items-center border border-stone-200 rounded-lg overflow-hidden focus-within:border-emerald-500">
               <input
                 type="number"
                 min="0"
@@ -260,28 +260,28 @@ export function StreamRow({ address, ownerPrivyId, splitMode = "PERCENTAGE", fix
                 placeholder="total to stream"
                 value={total}
                 onChange={(e) => setTotal(e.target.value)}
-                className="flex-1 px-3 py-2.5 text-sm text-gray-900 outline-none"
+                className="flex-1 px-3 py-2.5 text-sm text-stone-900 outline-none"
               />
-              <span className="px-2 text-xs text-gray-400">USDC</span>
+              <span className="px-2 text-xs text-stone-400">USDC</span>
             </div>
           )}
           <div className="flex gap-2">
             <div className="flex-1">
-              <label className="text-xs text-gray-400 mb-1 block">Start (optional)</label>
+              <label className="text-xs text-stone-400 mb-1 block">Start (optional)</label>
               <input
                 type="date"
                 value={start}
                 onChange={(e) => setStart(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-indigo-400"
+                className="w-full px-3 py-2 text-sm border border-stone-200 rounded-lg outline-none focus:border-emerald-500"
               />
             </div>
             <div className="flex-1">
-              <label className="text-xs text-gray-400 mb-1 block">End date</label>
+              <label className="text-xs text-stone-400 mb-1 block">End date</label>
               <input
                 type="date"
                 value={end}
                 onChange={(e) => setEnd(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-indigo-400"
+                className="w-full px-3 py-2 text-sm border border-stone-200 rounded-lg outline-none focus:border-emerald-500"
               />
             </div>
           </div>
@@ -290,13 +290,13 @@ export function StreamRow({ address, ownerPrivyId, splitMode = "PERCENTAGE", fix
             <button
               onClick={create}
               disabled={saving}
-              className="flex-1 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white font-medium rounded-lg transition-colors"
+              className="flex-1 py-2 text-sm bg-emerald-700 hover:bg-emerald-800 disabled:bg-emerald-300 text-white font-medium rounded-lg transition-colors"
             >
               {saving ? "Starting..." : "Start stream"}
             </button>
             <button
               onClick={() => { setAdding(false); setError(""); }}
-              className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700"
+              className="px-4 py-2 text-sm text-stone-500 hover:text-stone-700"
             >
               Cancel
             </button>
@@ -305,12 +305,12 @@ export function StreamRow({ address, ownerPrivyId, splitMode = "PERCENTAGE", fix
       ) : (
         <button
           onClick={() => setAdding(true)}
-          className="w-full py-2 text-sm text-indigo-600 hover:text-indigo-700 border border-dashed border-indigo-200 rounded-lg transition-colors"
+          className="w-full py-2 text-sm text-emerald-700 hover:text-emerald-800 border border-dashed border-emerald-200 rounded-lg transition-colors"
         >
           + Start a stream
         </button>
       )}
-      <p className="text-xs text-gray-400">
+      <p className="text-xs text-stone-400">
         The full total is reserved from the treasury upfront and accrues by the second across
         contributors {isFixed ? "by their fixed amount" : "by their %"}. Canceling returns the
         unclaimed remainder.

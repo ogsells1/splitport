@@ -37,7 +37,7 @@ function fmtDate(iso: string) {
 const STATUS_STYLE: Record<Status, string> = {
   PENDING: "text-amber-600 bg-amber-50",
   DONE: "text-emerald-600 bg-emerald-50",
-  CANCELED: "text-gray-400 bg-gray-100",
+  CANCELED: "text-stone-400 bg-stone-100",
 };
 
 export function ScheduledPayoutsRow({ address, ownerPrivyId, splitMode = "PERCENTAGE", fixedTotal = "0" }: ScheduledPayoutsRowProps) {
@@ -118,13 +118,13 @@ export function ScheduledPayoutsRow({ address, ownerPrivyId, splitMode = "PERCEN
   }
 
   if (loading) {
-    return <div className="h-24 bg-gray-100 rounded-2xl animate-pulse" />;
+    return <div className="h-24 bg-stone-100 rounded-2xl animate-pulse" />;
   }
 
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-5 space-y-4">
+    <div className="bg-white border border-stone-200 rounded-2xl p-5 space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-xs text-gray-400 uppercase tracking-wide">One-off payouts</p>
+        <p className="text-xs text-stone-400 uppercase tracking-wide">One-off payouts</p>
         {payments.some((p) => p.status === "PENDING") && (
           <span className="text-xs font-medium text-amber-600">
             {payments.filter((p) => p.status === "PENDING").length} scheduled
@@ -133,18 +133,18 @@ export function ScheduledPayoutsRow({ address, ownerPrivyId, splitMode = "PERCEN
       </div>
 
       {payments.length === 0 ? (
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-stone-500">
           Schedule individual payouts for specific dates — as many as you like.
         </p>
       ) : (
-        <div className="divide-y divide-gray-100 -my-1">
+        <div className="divide-y divide-stone-100 -my-1">
           {payments.map((p) => (
             <div key={p.id} className="flex items-center justify-between gap-3 py-2.5">
               <div className="min-w-0">
-                <p className="text-sm font-medium text-gray-800">
+                <p className="text-sm font-medium text-stone-800">
                   {parseFloat(formatUnits(BigInt(p.amount), 6)).toFixed(2)} USDC
                 </p>
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-stone-400">
                   {p.status === "DONE" && p.ranAt
                     ? `paid ${fmtDate(p.ranAt)}`
                     : fmtDate(p.runAt)}
@@ -174,14 +174,14 @@ export function ScheduledPayoutsRow({ address, ownerPrivyId, splitMode = "PERCEN
         <div className="space-y-3 pt-1">
           <div className="flex gap-2">
             {isFixed ? (
-              <div className="flex-1 flex items-center px-3 py-2.5 text-xs text-gray-500 bg-gray-50 rounded-lg">
+              <div className="flex-1 flex items-center px-3 py-2.5 text-xs text-stone-500 bg-stone-50 rounded-lg">
                 Pays fixed amounts —{" "}
-                <span className="font-medium text-gray-700 ml-1">
+                <span className="font-medium text-stone-700 ml-1">
                   {parseFloat(formatUnits(BigInt(fixedTotal), 6)).toFixed(2)} USDC
                 </span>
               </div>
             ) : (
-              <div className="flex-1 flex items-center border border-gray-200 rounded-lg overflow-hidden focus-within:border-indigo-400">
+              <div className="flex-1 flex items-center border border-stone-200 rounded-lg overflow-hidden focus-within:border-emerald-500">
                 <input
                   type="number"
                   min="0"
@@ -189,16 +189,16 @@ export function ScheduledPayoutsRow({ address, ownerPrivyId, splitMode = "PERCEN
                   placeholder="0.00"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  className="flex-1 px-3 py-2.5 text-sm text-gray-900 outline-none w-full"
+                  className="flex-1 px-3 py-2.5 text-sm text-stone-900 outline-none w-full"
                 />
-                <span className="px-2 text-xs text-gray-400">USDC</span>
+                <span className="px-2 text-xs text-stone-400">USDC</span>
               </div>
             )}
             <input
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="px-3 py-2.5 text-sm text-gray-900 border border-gray-200 rounded-lg outline-none focus:border-indigo-400"
+              className="px-3 py-2.5 text-sm text-stone-900 border border-stone-200 rounded-lg outline-none focus:border-emerald-500"
             />
           </div>
           {error && <p className="text-xs text-red-500">{error}</p>}
@@ -206,13 +206,13 @@ export function ScheduledPayoutsRow({ address, ownerPrivyId, splitMode = "PERCEN
             <button
               onClick={add}
               disabled={saving}
-              className="flex-1 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white font-medium rounded-lg transition-colors"
+              className="flex-1 py-2 text-sm bg-emerald-700 hover:bg-emerald-800 disabled:bg-emerald-300 text-white font-medium rounded-lg transition-colors"
             >
               {saving ? "Scheduling..." : "Schedule payout"}
             </button>
             <button
               onClick={() => { setAdding(false); setError(""); }}
-              className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700"
+              className="px-4 py-2 text-sm text-stone-500 hover:text-stone-700"
             >
               Cancel
             </button>
@@ -221,12 +221,12 @@ export function ScheduledPayoutsRow({ address, ownerPrivyId, splitMode = "PERCEN
       ) : (
         <button
           onClick={() => setAdding(true)}
-          className="w-full py-2 text-sm text-indigo-600 hover:text-indigo-700 border border-dashed border-indigo-200 rounded-lg transition-colors"
+          className="w-full py-2 text-sm text-emerald-700 hover:text-emerald-800 border border-dashed border-emerald-200 rounded-lg transition-colors"
         >
           + Schedule a payout
         </button>
       )}
-      <p className="text-xs text-gray-400">
+      <p className="text-xs text-stone-400">
         Each runs once on its date, splitting the amount across contributors by their %. Runs only
         when the treasury has enough balance; otherwise it retries the next day.
       </p>

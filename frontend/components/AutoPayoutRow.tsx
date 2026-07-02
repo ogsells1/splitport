@@ -139,7 +139,7 @@ export function AutoPayoutRow({ address, ownerPrivyId, splitMode = "PERCENTAGE",
   }
 
   if (loading) {
-    return <div className="h-24 bg-gray-100 rounded-2xl animate-pulse" />;
+    return <div className="h-24 bg-stone-100 rounded-2xl animate-pulse" />;
   }
 
   const freqLabel: Record<Frequency, string> = {
@@ -149,9 +149,9 @@ export function AutoPayoutRow({ address, ownerPrivyId, splitMode = "PERCENTAGE",
   };
 
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-5 space-y-4">
+    <div className="bg-white border border-stone-200 rounded-2xl p-5 space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-xs text-gray-400 uppercase tracking-wide">Automatic payouts</p>
+        <p className="text-xs text-stone-400 uppercase tracking-wide">Automatic payouts</p>
         {schedule && !editing && (
           <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
             on
@@ -163,26 +163,26 @@ export function AutoPayoutRow({ address, ownerPrivyId, splitMode = "PERCENTAGE",
         <>
           {schedule ? (
             <div className="space-y-1">
-              <p className="text-sm text-gray-800">
+              <p className="text-sm text-stone-800">
                 <span className="font-semibold">
                   {parseFloat(formatUnits(BigInt(schedule.amount), 6)).toFixed(2)} USDC
                 </span>{" "}
                 · {freqLabel[schedule.frequency].toLowerCase()}
               </p>
-              <p className="text-xs text-gray-400">
-                Next payout: <span className="text-gray-600">{fmtDate(schedule.nextRunAt)}</span>
+              <p className="text-xs text-stone-400">
+                Next payout: <span className="text-stone-600">{fmtDate(schedule.nextRunAt)}</span>
                 {schedule.lastRunAt && <> · last: {fmtDate(schedule.lastRunAt)}</>}
               </p>
             </div>
           ) : (
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-stone-500">
               Pay contributors automatically on a schedule, straight from the treasury.
             </p>
           )}
           <div className="flex gap-2">
             <button
               onClick={startEdit}
-              className="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors"
+              className="px-4 py-2 text-sm bg-emerald-700 hover:bg-emerald-800 text-white font-medium rounded-lg transition-colors"
             >
               {schedule ? "Edit schedule" : "Set up auto payouts"}
             </button>
@@ -202,7 +202,7 @@ export function AutoPayoutRow({ address, ownerPrivyId, splitMode = "PERCENTAGE",
       {editing && (
         <div className="space-y-3">
           <div>
-            <label className="text-xs text-gray-400 mb-1 block">Frequency</label>
+            <label className="text-xs text-stone-400 mb-1 block">Frequency</label>
             <div className="grid grid-cols-3 gap-1.5">
               {(["WEEKLY", "MONTHLY", "CUSTOM"] as Frequency[]).map((f) => (
                 <button
@@ -210,8 +210,8 @@ export function AutoPayoutRow({ address, ownerPrivyId, splitMode = "PERCENTAGE",
                   onClick={() => setFrequency(f)}
                   className={`py-2 text-xs font-medium rounded-lg border transition-colors ${
                     frequency === f
-                      ? "border-indigo-500 bg-indigo-50 text-indigo-700"
-                      : "border-gray-200 text-gray-500 hover:border-gray-300"
+                      ? "border-emerald-600 bg-emerald-50 text-emerald-800"
+                      : "border-stone-200 text-stone-500 hover:border-stone-300"
                   }`}
                 >
                   {f === "WEEKLY" ? "Weekly" : f === "MONTHLY" ? "Monthly" : "Custom date"}
@@ -221,17 +221,17 @@ export function AutoPayoutRow({ address, ownerPrivyId, splitMode = "PERCENTAGE",
           </div>
 
           {isFixed ? (
-            <div className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2">
+            <div className="text-xs text-stone-500 bg-stone-50 rounded-lg px-3 py-2">
               Each run pays every participant their fixed amount —{" "}
-              <span className="font-medium text-gray-700">
+              <span className="font-medium text-stone-700">
                 {parseFloat(formatUnits(BigInt(fixedTotal), 6)).toFixed(2)} USDC
               </span>{" "}
               per payout.
             </div>
           ) : (
             <div>
-              <label className="text-xs text-gray-400 mb-1 block">Amount per payout</label>
-              <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden focus-within:border-indigo-400">
+              <label className="text-xs text-stone-400 mb-1 block">Amount per payout</label>
+              <div className="flex items-center border border-stone-200 rounded-lg overflow-hidden focus-within:border-emerald-500">
                 <input
                   type="number"
                   min="0"
@@ -239,25 +239,25 @@ export function AutoPayoutRow({ address, ownerPrivyId, splitMode = "PERCENTAGE",
                   placeholder="0.00"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  className="flex-1 px-3 py-2.5 text-sm text-gray-900 outline-none"
+                  className="flex-1 px-3 py-2.5 text-sm text-stone-900 outline-none"
                 />
-                <span className="px-2 text-xs text-gray-400">USDC</span>
+                <span className="px-2 text-xs text-stone-400">USDC</span>
               </div>
             </div>
           )}
 
           <div>
-            <label className="text-xs text-gray-400 mb-1 block">
+            <label className="text-xs text-stone-400 mb-1 block">
               {frequency === "CUSTOM" ? "Payout date" : "First payout (optional)"}
             </label>
             <input
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="w-full px-3 py-2.5 text-sm text-gray-900 border border-gray-200 rounded-lg outline-none focus:border-indigo-400"
+              className="w-full px-3 py-2.5 text-sm text-stone-900 border border-stone-200 rounded-lg outline-none focus:border-emerald-500"
             />
             {frequency !== "CUSTOM" && (
-              <p className="text-xs text-gray-400 mt-1">
+              <p className="text-xs text-stone-400 mt-1">
                 Leave empty to start one {frequency === "WEEKLY" ? "week" : "month"} from now.
               </p>
             )}
@@ -269,18 +269,18 @@ export function AutoPayoutRow({ address, ownerPrivyId, splitMode = "PERCENTAGE",
             <button
               onClick={save}
               disabled={saving}
-              className="flex-1 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white font-medium rounded-lg transition-colors"
+              className="flex-1 py-2 text-sm bg-emerald-700 hover:bg-emerald-800 disabled:bg-emerald-300 text-white font-medium rounded-lg transition-colors"
             >
               {saving ? "Saving..." : "Save schedule"}
             </button>
             <button
               onClick={() => setEditing(false)}
-              className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700"
+              className="px-4 py-2 text-sm text-stone-500 hover:text-stone-700"
             >
               Cancel
             </button>
           </div>
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-stone-400">
             Each payout splits the amount across contributors by their %. It runs only when the
             treasury has enough balance; otherwise it retries the next day.
           </p>

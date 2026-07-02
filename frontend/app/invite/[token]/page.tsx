@@ -65,7 +65,7 @@ export default function InvitePage({ params }: { params: { token: string } }) {
   if (!invite) {
     return (
       <Centered>
-        <div className="w-6 h-6 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" />
+        <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
       </Centered>
     );
   }
@@ -73,7 +73,7 @@ export default function InvitePage({ params }: { params: { token: string } }) {
   if (invite.status === "CLAIMED" && claimState !== "done") {
     return (
       <Centered>
-        <p className="text-gray-600 text-sm text-center">
+        <p className="text-stone-600 text-sm text-center">
           This invite has already been claimed.
         </p>
       </Centered>
@@ -85,14 +85,14 @@ export default function InvitePage({ params }: { params: { token: string } }) {
       <Centered>
         <div className="text-center space-y-4 max-w-sm">
           <p className="text-2xl">✓</p>
-          <p className="text-gray-900 font-medium">You&apos;re in!</p>
-          <p className="text-gray-500 text-sm">
+          <p className="text-stone-900 font-medium">You&apos;re in!</p>
+          <p className="text-stone-500 text-sm">
             Your wallet is linked. When the project owner sends out payments, your share will show
             up in your cabinet — sign in any time to claim it to your wallet.
           </p>
           <a
             href="/cabinet"
-            className="inline-block w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl transition-colors text-sm"
+            className="inline-block w-full py-3 bg-emerald-700 hover:bg-emerald-800 text-white font-medium rounded-xl transition-colors text-sm"
           >
             Go to your cabinet
           </a>
@@ -105,15 +105,15 @@ export default function InvitePage({ params }: { params: { token: string } }) {
     <Centered>
       <div className="w-full max-w-sm space-y-5 text-center">
         <div>
-          <p className="text-gray-400 text-xs uppercase tracking-wide">You&apos;re invited to</p>
-          <h1 className="text-xl font-semibold text-gray-900">{invite.projectName}</h1>
+          <p className="text-stone-400 text-xs uppercase tracking-wide">You&apos;re invited to</p>
+          <h1 className="text-xl font-semibold text-stone-900">{invite.projectName}</h1>
         </div>
 
-        <div className="bg-gray-50 rounded-xl p-4 space-y-1">
-          <p className="text-sm text-gray-500">Role</p>
-          <p className="font-medium text-gray-900">{invite.role}</p>
-          <p className="text-sm text-gray-500 mt-2">Share</p>
-          <p className="font-medium text-gray-900">
+        <div className="bg-stone-50 rounded-xl p-4 space-y-1">
+          <p className="text-sm text-stone-500">Role</p>
+          <p className="font-medium text-stone-900">{invite.role}</p>
+          <p className="text-sm text-stone-500 mt-2">Share</p>
+          <p className="font-medium text-stone-900">
             {invite.splitMode === "FIXED" && invite.fixedAmount != null
               ? `${(Number(invite.fixedAmount) / 1e6).toFixed(2)} USDC per payout`
               : `${(invite.percentage / 100).toFixed(2)}%`}
@@ -121,23 +121,23 @@ export default function InvitePage({ params }: { params: { token: string } }) {
         </div>
 
         {!ready ? (
-          <div className="w-6 h-6 mx-auto border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" />
+          <div className="w-6 h-6 mx-auto border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
         ) : !authenticated ? (
           <button
             onClick={login}
-            className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl transition-colors text-sm"
+            className="w-full py-3 bg-emerald-700 hover:bg-emerald-800 text-white font-medium rounded-xl transition-colors text-sm"
           >
             Sign in to claim
           </button>
         ) : !walletAddress ? (
-          <p className="text-sm text-gray-500">Setting up your wallet...</p>
+          <p className="text-sm text-stone-500">Setting up your wallet...</p>
         ) : (
           <div className="space-y-2">
-            <p className="text-xs text-gray-400 font-mono break-all">{walletAddress}</p>
+            <p className="text-xs text-stone-400 font-mono break-all">{walletAddress}</p>
             <button
               onClick={handleClaim}
               disabled={claimState === "claiming"}
-              className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white font-medium rounded-xl transition-colors text-sm"
+              className="w-full py-3 bg-emerald-700 hover:bg-emerald-800 disabled:bg-emerald-300 text-white font-medium rounded-xl transition-colors text-sm"
             >
               {claimState === "claiming" ? "Linking wallet..." : "Link this wallet"}
             </button>
@@ -147,7 +147,7 @@ export default function InvitePage({ params }: { params: { token: string } }) {
           </div>
         )}
 
-        <p className="text-xs text-gray-400">
+        <p className="text-xs text-stone-400">
           The project owner will only see your wallet address — not your identity.
         </p>
       </div>

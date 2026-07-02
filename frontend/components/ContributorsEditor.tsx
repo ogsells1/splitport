@@ -254,7 +254,7 @@ export function ContributorsEditor({ vaultAddress, walletAddress, ownerPrivyId }
     return (
       <button
         onClick={() => setOpen(true)}
-        className="relative flex items-center justify-center gap-2 py-3 px-4 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-medium rounded-xl transition-colors text-sm"
+        className="relative flex items-center justify-center gap-2 py-3 px-4 bg-white border border-stone-200 hover:bg-stone-50 text-stone-700 font-medium rounded-xl transition-colors text-sm"
       >
         <span>✎</span> Edit Contributors
         {readyToSync.length > 0 && (
@@ -281,10 +281,10 @@ export function ContributorsEditor({ vaultAddress, walletAddress, ownerPrivyId }
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/40">
       <div className="bg-white rounded-2xl w-full max-w-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-gray-900">Edit Contributors</h3>
+          <h3 className="font-semibold text-stone-900">Edit Contributors</h3>
           <button
             onClick={() => { setOpen(false); setStep("idle"); setErrorMsg(""); }}
-            className="text-gray-400 hover:text-gray-600 text-xl leading-none"
+            className="text-stone-400 hover:text-stone-600 text-xl leading-none"
           >
             ×
           </button>
@@ -302,7 +302,7 @@ export function ContributorsEditor({ vaultAddress, walletAddress, ownerPrivyId }
                   className={`w-full px-3 py-2 text-sm font-mono border rounded-lg outline-none transition-colors ${
                     row.wallet && !isAddress(row.wallet)
                       ? "border-red-300 focus:border-red-400"
-                      : "border-gray-200 focus:border-indigo-400"
+                      : "border-stone-200 focus:border-emerald-500"
                   }`}
                 />
                 <div className="flex gap-1.5">
@@ -311,9 +311,9 @@ export function ContributorsEditor({ vaultAddress, walletAddress, ownerPrivyId }
                     placeholder="role (e.g. artist)"
                     value={row.role}
                     onChange={(e) => updateRow(i, "role", e.target.value)}
-                    className="flex-1 px-3 py-1.5 text-xs border border-gray-200 rounded-lg outline-none focus:border-indigo-400 transition-colors"
+                    className="flex-1 px-3 py-1.5 text-xs border border-stone-200 rounded-lg outline-none focus:border-emerald-500 transition-colors"
                   />
-                  <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden focus-within:border-indigo-400">
+                  <div className="flex items-center border border-stone-200 rounded-lg overflow-hidden focus-within:border-emerald-500">
                     <input
                       type="number"
                       min="0"
@@ -324,13 +324,13 @@ export function ContributorsEditor({ vaultAddress, walletAddress, ownerPrivyId }
                       onChange={(e) => updateRow(i, "percentage", e.target.value)}
                       className="w-16 px-2 py-1.5 text-xs text-right outline-none"
                     />
-                    <span className="px-1.5 text-xs text-gray-400">%</span>
+                    <span className="px-1.5 text-xs text-stone-400">%</span>
                   </div>
                 </div>
               </div>
               <button
                 onClick={() => removeRow(i)}
-                className="text-gray-300 hover:text-red-400 text-lg leading-none mt-1.5"
+                className="text-stone-300 hover:text-red-400 text-lg leading-none mt-1.5"
                 title="Remove"
               >
                 ×
@@ -371,7 +371,7 @@ export function ContributorsEditor({ vaultAddress, walletAddress, ownerPrivyId }
 
         {pendingInvites.length > 0 && (
           <div className="space-y-2">
-            <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">
+            <p className="text-xs font-medium text-stone-400 uppercase tracking-wide">
               Waiting for participant
             </p>
             {pendingInvites.map((inv, i) => (
@@ -411,28 +411,28 @@ export function ContributorsEditor({ vaultAddress, walletAddress, ownerPrivyId }
         <div className="flex gap-2">
           <button
             onClick={addRow}
-            className="flex-1 py-2 text-sm text-indigo-600 hover:text-indigo-700 border border-dashed border-indigo-200 rounded-lg transition-colors"
+            className="flex-1 py-2 text-sm text-emerald-700 hover:text-emerald-800 border border-dashed border-emerald-200 rounded-lg transition-colors"
           >
             + Add Contributor
           </button>
           <button
             onClick={() => { setShowInviteForm((v) => !v); setNewInviteLink(null); setInviteError(""); }}
-            className="flex-1 py-2 text-sm text-gray-600 hover:text-gray-800 border border-dashed border-gray-300 rounded-lg transition-colors"
+            className="flex-1 py-2 text-sm text-stone-600 hover:text-stone-800 border border-dashed border-stone-300 rounded-lg transition-colors"
           >
             + Invite by Link
           </button>
         </div>
 
         {showInviteForm && (
-          <div className="bg-gray-50 rounded-xl p-3 space-y-2">
+          <div className="bg-stone-50 rounded-xl p-3 space-y-2">
             {newInviteLink ? (
               <div className="space-y-2">
-                <p className="text-xs text-gray-500">Share this link with the participant:</p>
+                <p className="text-xs text-stone-500">Share this link with the participant:</p>
                 <div className="flex items-center gap-2">
                   <input
                     readOnly
                     value={newInviteLink}
-                    className="flex-1 px-2 py-1.5 text-xs font-mono border border-gray-200 rounded-lg bg-white outline-none"
+                    className="flex-1 px-2 py-1.5 text-xs font-mono border border-stone-200 rounded-lg bg-white outline-none"
                   />
                   <button
                     onClick={() => {
@@ -440,14 +440,14 @@ export function ContributorsEditor({ vaultAddress, walletAddress, ownerPrivyId }
                       setCopied(true);
                       setTimeout(() => setCopied(false), 1500);
                     }}
-                    className="text-xs text-indigo-600 hover:text-indigo-700 px-2 py-1.5 border border-indigo-200 rounded-lg"
+                    className="text-xs text-emerald-700 hover:text-emerald-800 px-2 py-1.5 border border-emerald-200 rounded-lg"
                   >
                     {copied ? "Copied!" : "Copy"}
                   </button>
                 </div>
                 <button
                   onClick={() => setNewInviteLink(null)}
-                  className="text-xs text-gray-400 hover:text-gray-600"
+                  className="text-xs text-stone-400 hover:text-stone-600"
                 >
                   + Create another invite
                 </button>
@@ -460,9 +460,9 @@ export function ContributorsEditor({ vaultAddress, walletAddress, ownerPrivyId }
                     placeholder="role (e.g. artist)"
                     value={inviteRole}
                     onChange={(e) => setInviteRole(e.target.value)}
-                    className="flex-1 px-3 py-1.5 text-xs border border-gray-200 rounded-lg outline-none focus:border-indigo-400 transition-colors"
+                    className="flex-1 px-3 py-1.5 text-xs border border-stone-200 rounded-lg outline-none focus:border-emerald-500 transition-colors"
                   />
-                  <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden focus-within:border-indigo-400">
+                  <div className="flex items-center border border-stone-200 rounded-lg overflow-hidden focus-within:border-emerald-500">
                     <input
                       type="number"
                       min="0"
@@ -473,18 +473,18 @@ export function ContributorsEditor({ vaultAddress, walletAddress, ownerPrivyId }
                       onChange={(e) => setInvitePct(e.target.value)}
                       className="w-16 px-2 py-1.5 text-xs text-right outline-none"
                     />
-                    <span className="px-1.5 text-xs text-gray-400">%</span>
+                    <span className="px-1.5 text-xs text-stone-400">%</span>
                   </div>
                 </div>
                 {inviteError && <p className="text-xs text-red-500">{inviteError}</p>}
                 <button
                   onClick={createInvite}
                   disabled={creatingInvite}
-                  className="w-full py-2 text-sm bg-gray-800 hover:bg-gray-900 disabled:bg-gray-400 text-white font-medium rounded-lg transition-colors"
+                  className="w-full py-2 text-sm bg-stone-800 hover:bg-stone-900 disabled:bg-stone-400 text-white font-medium rounded-lg transition-colors"
                 >
                   {creatingInvite ? "Generating..." : "Generate invite link"}
                 </button>
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-stone-400">
                   This share is reserved until the link is claimed — it won&apos;t count toward the
                   100% on-chain until then.
                 </p>
@@ -522,7 +522,7 @@ export function ContributorsEditor({ vaultAddress, walletAddress, ownerPrivyId }
         <button
           onClick={handleSave}
           disabled={!canSubmit || busy || step === "done"}
-          className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white font-medium rounded-xl transition-colors text-sm"
+          className="w-full py-3 bg-emerald-700 hover:bg-emerald-800 disabled:bg-emerald-300 text-white font-medium rounded-xl transition-colors text-sm"
         >
           {busy ? (
             <span className="flex items-center justify-center gap-2">

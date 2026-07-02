@@ -46,7 +46,7 @@ export function ProjectSwitcher({ ownerPrivyId, currentAddress }: ProjectSwitche
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1.5 text-sm font-medium text-gray-900 bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-lg transition-colors"
+        className="flex items-center gap-1.5 text-sm font-medium text-stone-900 bg-stone-100 hover:bg-stone-200 px-3 py-1.5 rounded-lg transition-colors"
       >
         {loading ? "Loading..." : current?.name ?? "Select project"}
         <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className="opacity-50">
@@ -55,10 +55,10 @@ export function ProjectSwitcher({ ownerPrivyId, currentAddress }: ProjectSwitche
       </button>
 
       {open && (
-        <div className="absolute left-0 mt-2 w-64 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden z-50">
-          <div className="max-h-72 overflow-y-auto divide-y divide-gray-100">
+        <div className="absolute left-0 mt-2 w-64 bg-white border border-stone-200 rounded-xl shadow-lg overflow-hidden z-50">
+          <div className="max-h-72 overflow-y-auto divide-y divide-stone-100">
             {projects.length === 0 && !loading && (
-              <p className="px-4 py-3 text-sm text-gray-400">No projects yet</p>
+              <p className="px-4 py-3 text-sm text-stone-400">No projects yet</p>
             )}
             {projects.map((p) => (
               <button
@@ -67,14 +67,14 @@ export function ProjectSwitcher({ ownerPrivyId, currentAddress }: ProjectSwitche
                   setOpen(false);
                   router.push(`/dashboard/${p.contractAddress}`);
                 }}
-                className={`w-full text-left px-4 py-2.5 hover:bg-gray-50 transition-colors ${
+                className={`w-full text-left px-4 py-2.5 hover:bg-stone-50 transition-colors ${
                   p.contractAddress.toLowerCase() === currentAddress.toLowerCase()
-                    ? "bg-indigo-50"
+                    ? "bg-emerald-50"
                     : ""
                 }`}
               >
-                <p className="text-sm font-medium text-gray-900">{p.name}</p>
-                <p className="text-xs text-gray-400 font-mono mt-0.5">
+                <p className="text-sm font-medium text-stone-900">{p.name}</p>
+                <p className="text-xs text-stone-400 font-mono mt-0.5">
                   {p.contractAddress.startsWith("db_")
                     ? `${p.contributorCount} contributors`
                     : `${p.contractAddress.slice(0, 8)}...${p.contractAddress.slice(-6)} · ${p.contributorCount} contributors`}
@@ -87,7 +87,7 @@ export function ProjectSwitcher({ ownerPrivyId, currentAddress }: ProjectSwitche
               setOpen(false);
               router.push("/create");
             }}
-            className="w-full text-left px-4 py-3 text-sm text-indigo-600 hover:bg-indigo-50 transition-colors border-t border-gray-100"
+            className="w-full text-left px-4 py-3 text-sm text-emerald-700 hover:bg-emerald-50 transition-colors border-t border-stone-100"
           >
             + New Project
           </button>

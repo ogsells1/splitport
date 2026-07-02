@@ -33,7 +33,7 @@ export default function CreateProjectPage() {
   if (!ready || !authenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-6 h-6 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -104,11 +104,11 @@ export default function CreateProjectPage() {
   // ── Success screen: show invite links ────────────────────────────────
   if (createdAddress) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <header className="bg-white border-b border-gray-200 px-4 py-3">
+      <div className="min-h-screen bg-stone-50">
+        <header className="bg-white border-b border-stone-200 px-4 py-3">
           <div className="max-w-2xl mx-auto flex items-center justify-between">
-            <a href="/dashboard" className="font-semibold text-gray-900 hover:text-indigo-600 transition-colors">BYN Split Pay</a>
-            <button onClick={logout} className="text-sm text-gray-400 hover:text-gray-600 transition-colors">
+            <a href="/dashboard" className="flex items-center gap-2 font-semibold text-stone-900 hover:text-emerald-700 transition-colors"><span className="flex h-6 w-6 items-center justify-center rounded-md bg-emerald-700 text-[11px] font-bold text-white">S</span>Splitport</a>
+            <button onClick={logout} className="text-sm text-stone-400 hover:text-stone-600 transition-colors">
               Sign out
             </button>
           </div>
@@ -117,17 +117,17 @@ export default function CreateProjectPage() {
         <main className="max-w-2xl mx-auto px-4 py-8 space-y-6">
           <div className="text-center space-y-1">
             <p className="text-2xl">✓</p>
-            <h1 className="text-xl font-semibold text-gray-900">Project created</h1>
-            <p className="text-sm text-gray-500">Share these invite links with your contributors.</p>
+            <h1 className="text-xl font-semibold text-stone-900">Project created</h1>
+            <p className="text-sm text-stone-500">Share these invite links with your contributors.</p>
           </div>
 
           {createdInvites.length > 0 ? (
-            <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+            <div className="bg-white border border-stone-200 rounded-2xl overflow-hidden">
               {createdInvites.map((inv, i) => {
                 const url = `${window.location.origin}${inv.inviteUrl}`;
                 return (
-                  <div key={i} className="px-4 py-3 border-b border-gray-100 last:border-0 space-y-1.5">
-                    <p className="text-sm font-medium text-gray-900">
+                  <div key={i} className="px-4 py-3 border-b border-stone-100 last:border-0 space-y-1.5">
+                    <p className="text-sm font-medium text-stone-900">
                       {inv.role} ·{" "}
                       {inv.amount != null
                         ? `${inv.amount.toFixed(2)} USDC`
@@ -137,7 +137,7 @@ export default function CreateProjectPage() {
                       <input
                         readOnly
                         value={url}
-                        className="flex-1 px-2 py-1.5 text-xs font-mono border border-gray-200 rounded-lg bg-gray-50 outline-none"
+                        className="flex-1 px-2 py-1.5 text-xs font-mono border border-stone-200 rounded-lg bg-stone-50 outline-none"
                       />
                       <button
                         onClick={() => {
@@ -145,7 +145,7 @@ export default function CreateProjectPage() {
                           setCopied(i);
                           setTimeout(() => setCopied(null), 1500);
                         }}
-                        className="text-xs text-indigo-600 hover:text-indigo-700 px-3 py-1.5 border border-indigo-200 rounded-lg whitespace-nowrap"
+                        className="text-xs text-emerald-700 hover:text-emerald-800 px-3 py-1.5 border border-emerald-200 rounded-lg whitespace-nowrap"
                       >
                         {copied === i ? "Copied!" : "Copy"}
                       </button>
@@ -155,14 +155,14 @@ export default function CreateProjectPage() {
               })}
             </div>
           ) : (
-            <p className="text-sm text-gray-400 text-center bg-white border border-gray-200 rounded-2xl px-4 py-6">
+            <p className="text-sm text-stone-400 text-center bg-white border border-stone-200 rounded-2xl px-4 py-6">
               No invite links — all contributors were added by wallet.
             </p>
           )}
 
           <button
             onClick={() => router.push(`/dashboard/${createdAddress}`)}
-            className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl transition-colors text-sm"
+            className="w-full py-3 bg-emerald-700 hover:bg-emerald-800 text-white font-medium rounded-xl transition-colors text-sm"
           >
             Go to project
           </button>
@@ -173,15 +173,15 @@ export default function CreateProjectPage() {
 
   // ── Create form ──────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200 px-4 py-3">
+    <div className="min-h-screen bg-stone-50">
+      <header className="bg-white border-b border-stone-200 px-4 py-3">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
-          <a href="/dashboard" className="font-semibold text-gray-900 hover:text-indigo-600 transition-colors">BYN Split Pay</a>
+          <a href="/dashboard" className="flex items-center gap-2 font-semibold text-stone-900 hover:text-emerald-700 transition-colors"><span className="flex h-6 w-6 items-center justify-center rounded-md bg-emerald-700 text-[11px] font-bold text-white">S</span>Splitport</a>
           <div className="flex items-center gap-3">
-            <a href="/dashboard" className="text-sm text-gray-400 hover:text-gray-600 transition-colors">
+            <a href="/dashboard" className="text-sm text-stone-400 hover:text-stone-600 transition-colors">
               ← Back
             </a>
-            <button onClick={logout} className="text-sm text-gray-400 hover:text-gray-600 transition-colors">
+            <button onClick={logout} className="text-sm text-stone-400 hover:text-stone-600 transition-colors">
               Sign out
             </button>
           </div>
@@ -190,37 +190,37 @@ export default function CreateProjectPage() {
 
       <main className="max-w-2xl mx-auto px-4 py-8 space-y-6">
         <div>
-          <h1 className="text-xl font-semibold text-gray-900">Create New Project</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <h1 className="text-xl font-semibold text-stone-900">Create New Project</h1>
+          <p className="text-sm text-stone-500 mt-1">
             Set up your split and invite contributors by link — no wallet or crypto needed to start.
           </p>
         </div>
 
-        <div className="bg-white border border-gray-200 rounded-2xl p-5">
-          <label className="block text-sm text-gray-500 mb-1.5">Project name</label>
+        <div className="bg-white border border-stone-200 rounded-2xl p-5">
+          <label className="block text-sm text-stone-500 mb-1.5">Project name</label>
           <input
             type="text"
             placeholder="My Music Project"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl outline-none focus:border-indigo-400 transition-colors"
+            className="w-full px-3 py-2.5 text-sm border border-stone-200 rounded-xl outline-none focus:border-emerald-500 transition-colors"
           />
         </div>
 
-        <div className="bg-white border border-gray-200 rounded-2xl p-5">
-          <p className="text-sm font-medium text-gray-700 mb-2">How to split payouts</p>
+        <div className="bg-white border border-stone-200 rounded-2xl p-5">
+          <p className="text-sm font-medium text-stone-700 mb-2">How to split payouts</p>
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
               onClick={() => setSplitMode("PERCENTAGE")}
               className={`text-left p-3 rounded-xl border transition-colors ${
-                !isFixed ? "border-indigo-500 bg-indigo-50" : "border-gray-200 hover:border-gray-300"
+                !isFixed ? "border-emerald-600 bg-emerald-50" : "border-stone-200 hover:border-stone-300"
               }`}
             >
-              <p className={`text-sm font-medium ${!isFixed ? "text-indigo-700" : "text-gray-700"}`}>
+              <p className={`text-sm font-medium ${!isFixed ? "text-emerald-800" : "text-stone-700"}`}>
                 By percentage
               </p>
-              <p className="text-xs text-gray-500 mt-0.5">
+              <p className="text-xs text-stone-500 mt-0.5">
                 Split each payout by % (shares sum to 100%).
               </p>
             </button>
@@ -228,22 +228,22 @@ export default function CreateProjectPage() {
               type="button"
               onClick={() => setSplitMode("FIXED")}
               className={`text-left p-3 rounded-xl border transition-colors ${
-                isFixed ? "border-indigo-500 bg-indigo-50" : "border-gray-200 hover:border-gray-300"
+                isFixed ? "border-emerald-600 bg-emerald-50" : "border-stone-200 hover:border-stone-300"
               }`}
             >
-              <p className={`text-sm font-medium ${isFixed ? "text-indigo-700" : "text-gray-700"}`}>
+              <p className={`text-sm font-medium ${isFixed ? "text-emerald-800" : "text-stone-700"}`}>
                 Fixed amount
               </p>
-              <p className="text-xs text-gray-500 mt-0.5">
+              <p className="text-xs text-stone-500 mt-0.5">
                 Each participant gets a fixed USDC amount.
               </p>
             </button>
           </div>
-          <p className="text-xs text-gray-400 mt-2">The mode is set now and can&apos;t be changed later.</p>
+          <p className="text-xs text-stone-400 mt-2">The mode is set now and can&apos;t be changed later.</p>
         </div>
 
-        <div className="bg-white border border-gray-200 rounded-2xl p-5 space-y-4">
-          <p className="text-sm font-medium text-gray-700">Contributors</p>
+        <div className="bg-white border border-stone-200 rounded-2xl p-5 space-y-4">
+          <p className="text-sm font-medium text-stone-700">Contributors</p>
 
           {rows.map((row, i) => (
             <div key={i} className="flex items-start gap-2">
@@ -254,10 +254,10 @@ export default function CreateProjectPage() {
                     placeholder="role (e.g. artist)"
                     value={row.role}
                     onChange={(e) => updateRow(i, "role", e.target.value)}
-                    className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-indigo-400 transition-colors"
+                    className="flex-1 px-3 py-2 text-sm border border-stone-200 rounded-lg outline-none focus:border-emerald-500 transition-colors"
                   />
                   {isFixed ? (
-                    <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden focus-within:border-indigo-400">
+                    <div className="flex items-center border border-stone-200 rounded-lg overflow-hidden focus-within:border-emerald-500">
                       <input
                         type="number"
                         min="0"
@@ -267,10 +267,10 @@ export default function CreateProjectPage() {
                         onChange={(e) => updateRow(i, "amount", e.target.value)}
                         className="w-20 px-2 py-2 text-sm text-right outline-none"
                       />
-                      <span className="px-1.5 text-xs text-gray-400">USDC</span>
+                      <span className="px-1.5 text-xs text-stone-400">USDC</span>
                     </div>
                   ) : (
-                    <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden focus-within:border-indigo-400">
+                    <div className="flex items-center border border-stone-200 rounded-lg overflow-hidden focus-within:border-emerald-500">
                       <input
                         type="number"
                         min="0"
@@ -281,24 +281,24 @@ export default function CreateProjectPage() {
                         onChange={(e) => updateRow(i, "percentage", e.target.value)}
                         className="w-16 px-2 py-2 text-sm text-right outline-none"
                       />
-                      <span className="px-1.5 text-xs text-gray-400">%</span>
+                      <span className="px-1.5 text-xs text-stone-400">%</span>
                     </div>
                   )}
                 </div>
 
                 <div className="flex items-center gap-1.5">
-                  <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs">
+                  <div className="flex rounded-lg border border-stone-200 overflow-hidden text-xs">
                     <button
                       type="button"
                       onClick={() => setMode(i, "invite")}
-                      className={`px-2.5 py-1.5 transition-colors ${row.mode === "invite" ? "bg-indigo-600 text-white" : "bg-white text-gray-500 hover:bg-gray-50"}`}
+                      className={`px-2.5 py-1.5 transition-colors ${row.mode === "invite" ? "bg-emerald-700 text-white" : "bg-white text-stone-500 hover:bg-stone-50"}`}
                     >
                       Invite link
                     </button>
                     <button
                       type="button"
                       onClick={() => setMode(i, "wallet")}
-                      className={`px-2.5 py-1.5 transition-colors ${row.mode === "wallet" ? "bg-indigo-600 text-white" : "bg-white text-gray-500 hover:bg-gray-50"}`}
+                      className={`px-2.5 py-1.5 transition-colors ${row.mode === "wallet" ? "bg-emerald-700 text-white" : "bg-white text-stone-500 hover:bg-stone-50"}`}
                     >
                       Wallet
                     </button>
@@ -312,11 +312,11 @@ export default function CreateProjectPage() {
                       className={`flex-1 px-3 py-1.5 text-xs font-mono border rounded-lg outline-none transition-colors ${
                         row.wallet && !isAddress(row.wallet)
                           ? "border-red-300 focus:border-red-400"
-                          : "border-gray-200 focus:border-indigo-400"
+                          : "border-stone-200 focus:border-emerald-500"
                       }`}
                     />
                   ) : (
-                    <span className="flex-1 text-xs text-gray-400 px-1">
+                    <span className="flex-1 text-xs text-stone-400 px-1">
                       A claim link will be generated to share.
                     </span>
                   )}
@@ -324,7 +324,7 @@ export default function CreateProjectPage() {
               </div>
               <button
                 onClick={() => removeRow(i)}
-                className="text-gray-300 hover:text-red-400 text-lg leading-none mt-1.5"
+                className="text-stone-300 hover:text-red-400 text-lg leading-none mt-1.5"
                 title="Remove"
               >
                 ×
@@ -334,13 +334,13 @@ export default function CreateProjectPage() {
 
           <button
             onClick={addRow}
-            className="w-full py-2 text-sm text-indigo-600 hover:text-indigo-700 border border-dashed border-indigo-200 rounded-lg transition-colors"
+            className="w-full py-2 text-sm text-emerald-700 hover:text-emerald-800 border border-dashed border-emerald-200 rounded-lg transition-colors"
           >
             + Add Contributor
           </button>
 
           {isFixed ? (
-            <div className="flex items-center justify-between text-sm px-3 py-2 rounded-lg bg-gray-50 text-gray-700">
+            <div className="flex items-center justify-between text-sm px-3 py-2 rounded-lg bg-stone-50 text-stone-700">
               <span>Total per payout</span>
               <span className="font-semibold">{fixedSum.toFixed(2)} USDC</span>
             </div>
@@ -369,7 +369,7 @@ export default function CreateProjectPage() {
         <button
           onClick={handleCreate}
           disabled={!canSubmit || busy}
-          className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white font-medium rounded-xl transition-colors text-sm"
+          className="w-full py-3 bg-emerald-700 hover:bg-emerald-800 disabled:bg-emerald-300 text-white font-medium rounded-xl transition-colors text-sm"
         >
           {busy ? (
             <span className="flex items-center justify-center gap-2">

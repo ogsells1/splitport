@@ -237,8 +237,8 @@ export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboard
   if (loading) {
     return (
       <div className="space-y-4 animate-pulse">
-        <div className="h-12 bg-gray-100 rounded-2xl" />
-        <div className="h-48 bg-gray-100 rounded-2xl" />
+        <div className="h-12 bg-stone-100 rounded-2xl" />
+        <div className="h-48 bg-stone-100 rounded-2xl" />
       </div>
     );
   }
@@ -247,24 +247,24 @@ export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboard
     <div className="space-y-6">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Project</p>
-          <h2 className="text-xl font-semibold text-gray-900">{name}</h2>
-          <span className="inline-block mt-1.5 text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
+          <p className="text-xs text-stone-400 uppercase tracking-wide mb-1">Project</p>
+          <h2 className="text-xl font-semibold text-stone-900">{name}</h2>
+          <span className="inline-block mt-1.5 text-xs bg-stone-100 text-stone-600 px-2 py-0.5 rounded-full">
             {isFixed ? "Fixed amount" : "Percentage split"}
           </span>
         </div>
         {isOwner && (
-          <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full mt-1">
+          <span className="text-xs bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full mt-1">
             owner
           </span>
         )}
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-        <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-          <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Contributors</p>
+      <div className="bg-white border border-stone-200 rounded-2xl overflow-hidden">
+        <div className="px-4 py-3 border-b border-stone-100 flex items-center justify-between">
+          <p className="text-xs font-medium text-stone-400 uppercase tracking-wide">Contributors</p>
           {isFixed ? (
-            <span className="text-xs font-medium text-gray-600">
+            <span className="text-xs font-medium text-stone-600">
               {fmtUsdc(fixedTotal)} USDC / payout
             </span>
           ) : (
@@ -279,9 +279,9 @@ export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboard
         </div>
 
         {contributors.length === 0 ? (
-          <p className="px-4 py-6 text-sm text-gray-400 text-center">No contributors yet.</p>
+          <p className="px-4 py-6 text-sm text-stone-400 text-center">No contributors yet.</p>
         ) : (
-          <div className="divide-y divide-gray-100">
+          <div className="divide-y divide-stone-100">
             {contributors.map((c) => (
               <div key={c.id} className="flex items-center justify-between gap-3 px-4 py-3">
                 <div className="flex items-center gap-3 min-w-0">
@@ -290,13 +290,13 @@ export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboard
                       type="checkbox"
                       checked={selected.has(c.id)}
                       onChange={() => toggleSelected(c.id)}
-                      className="w-4 h-4 accent-indigo-600 shrink-0"
+                      className="w-4 h-4 accent-emerald-700 shrink-0"
                     />
                   )}
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-gray-800">{c.role}</p>
+                    <p className="text-sm font-medium text-stone-800">{c.role}</p>
                     {c.status === "CLAIMED" && c.wallet ? (
-                      <p className="text-xs text-gray-400 font-mono mt-0.5">
+                      <p className="text-xs text-stone-400 font-mono mt-0.5">
                         {c.wallet.slice(0, 6)}...{c.wallet.slice(-4)}
                       </p>
                     ) : (
@@ -306,7 +306,7 @@ export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboard
                           <>
                             <button
                               onClick={() => copy(c.inviteToken!)}
-                              className="text-xs text-indigo-600 hover:text-indigo-700 underline"
+                              className="text-xs text-emerald-700 hover:text-emerald-800 underline"
                             >
                               {copied === c.inviteToken ? "Copied!" : "Copy link"}
                             </button>
@@ -332,17 +332,17 @@ export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboard
                         step="0.01"
                         value={editValue}
                         onChange={(e) => setEditValue(e.target.value)}
-                        className="w-20 px-2 py-1 text-sm text-right border border-gray-200 rounded-lg outline-none focus:border-indigo-400"
+                        className="w-20 px-2 py-1 text-sm text-right border border-stone-200 rounded-lg outline-none focus:border-emerald-500"
                       />
                       <button
                         onClick={() => saveAmount(c.id)}
-                        className="text-xs text-indigo-600 hover:text-indigo-700"
+                        className="text-xs text-emerald-700 hover:text-emerald-800"
                       >
                         Save
                       </button>
                       <button
                         onClick={() => { setEditingId(null); setEditValue(""); }}
-                        className="text-xs text-gray-400 hover:text-gray-600"
+                        className="text-xs text-stone-400 hover:text-stone-600"
                       >
                         ×
                       </button>
@@ -354,8 +354,8 @@ export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboard
                         setEditingId(c.id);
                         setEditValue(formatUnits(BigInt(c.fixedAmount ?? "0"), 6));
                       }}
-                      className={`text-sm font-semibold text-gray-900 ${
-                        isOwner ? "hover:text-indigo-600" : ""
+                      className={`text-sm font-semibold text-stone-900 ${
+                        isOwner ? "hover:text-emerald-700" : ""
                       }`}
                       title={isOwner ? "Edit amount" : undefined}
                     >
@@ -363,7 +363,7 @@ export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboard
                     </button>
                   )
                 ) : (
-                  <span className="text-sm font-semibold text-gray-900">
+                  <span className="text-sm font-semibold text-stone-900">
                     {(c.percentage / 100).toFixed(2)}%
                   </span>
                 )}
@@ -373,21 +373,21 @@ export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboard
         )}
 
         {isOwner && (
-          <div className="px-4 py-3 border-t border-gray-100">
+          <div className="px-4 py-3 border-t border-stone-100">
             {showInvite ? (
               <div className="space-y-2">
-                <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs w-max">
+                <div className="flex rounded-lg border border-stone-200 overflow-hidden text-xs w-max">
                   <button
                     type="button"
                     onClick={() => setAddMode("invite")}
-                    className={`px-2.5 py-1.5 transition-colors ${addMode === "invite" ? "bg-indigo-600 text-white" : "bg-white text-gray-500 hover:bg-gray-50"}`}
+                    className={`px-2.5 py-1.5 transition-colors ${addMode === "invite" ? "bg-emerald-700 text-white" : "bg-white text-stone-500 hover:bg-stone-50"}`}
                   >
                     Invite link
                   </button>
                   <button
                     type="button"
                     onClick={() => setAddMode("wallet")}
-                    className={`px-2.5 py-1.5 transition-colors ${addMode === "wallet" ? "bg-indigo-600 text-white" : "bg-white text-gray-500 hover:bg-gray-50"}`}
+                    className={`px-2.5 py-1.5 transition-colors ${addMode === "wallet" ? "bg-emerald-700 text-white" : "bg-white text-stone-500 hover:bg-stone-50"}`}
                   >
                     Wallet
                   </button>
@@ -398,9 +398,9 @@ export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboard
                     placeholder="role (e.g. artist)"
                     value={inviteRole}
                     onChange={(e) => setInviteRole(e.target.value)}
-                    className="flex-1 px-3 py-1.5 text-xs border border-gray-200 rounded-lg outline-none focus:border-indigo-400"
+                    className="flex-1 px-3 py-1.5 text-xs border border-stone-200 rounded-lg outline-none focus:border-emerald-500"
                   />
-                  <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden focus-within:border-indigo-400">
+                  <div className="flex items-center border border-stone-200 rounded-lg overflow-hidden focus-within:border-emerald-500">
                     {isFixed ? (
                       <>
                         <input
@@ -412,7 +412,7 @@ export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboard
                           onChange={(e) => setInviteAmount(e.target.value)}
                           className="w-20 px-2 py-1.5 text-xs text-right outline-none"
                         />
-                        <span className="px-1.5 text-xs text-gray-400">USDC</span>
+                        <span className="px-1.5 text-xs text-stone-400">USDC</span>
                       </>
                     ) : (
                       <>
@@ -426,7 +426,7 @@ export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboard
                           onChange={(e) => setInvitePct(e.target.value)}
                           className="w-16 px-2 py-1.5 text-xs text-right outline-none"
                         />
-                        <span className="px-1.5 text-xs text-gray-400">%</span>
+                        <span className="px-1.5 text-xs text-stone-400">%</span>
                       </>
                     )}
                   </div>
@@ -440,7 +440,7 @@ export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboard
                     className={`w-full px-3 py-1.5 text-xs font-mono border rounded-lg outline-none transition-colors ${
                       inviteWallet && !isAddress(inviteWallet)
                         ? "border-red-300 focus:border-red-400"
-                        : "border-gray-200 focus:border-indigo-400"
+                        : "border-stone-200 focus:border-emerald-500"
                     }`}
                   />
                 )}
@@ -449,7 +449,7 @@ export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboard
                   <button
                     onClick={createInvite}
                     disabled={creating}
-                    className="flex-1 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white font-medium rounded-lg transition-colors"
+                    className="flex-1 py-2 text-sm bg-emerald-700 hover:bg-emerald-800 disabled:bg-emerald-300 text-white font-medium rounded-lg transition-colors"
                   >
                     {creating
                       ? "Saving..."
@@ -459,7 +459,7 @@ export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboard
                   </button>
                   <button
                     onClick={() => { setShowInvite(false); setInviteError(""); }}
-                    className="px-3 py-2 text-sm text-gray-500 hover:text-gray-700"
+                    className="px-3 py-2 text-sm text-stone-500 hover:text-stone-700"
                   >
                     Cancel
                   </button>
@@ -468,7 +468,7 @@ export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboard
             ) : (
               <button
                 onClick={() => setShowInvite(true)}
-                className="w-full py-2 text-sm text-indigo-600 hover:text-indigo-700 border border-dashed border-indigo-200 rounded-lg transition-colors"
+                className="w-full py-2 text-sm text-emerald-700 hover:text-emerald-800 border border-dashed border-emerald-200 rounded-lg transition-colors"
               >
                 + Add Contributor
               </button>
@@ -478,19 +478,19 @@ export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboard
       </div>
 
       {isOwner && contributors.length > 0 && (
-        <div className="bg-white border border-gray-200 rounded-2xl p-5 space-y-4">
+        <div className="bg-white border border-stone-200 rounded-2xl p-5 space-y-4">
           <div className="flex items-end justify-between gap-3">
             <div>
-              <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Treasury balance</p>
-              <p className="text-2xl font-semibold text-gray-900">
+              <p className="text-xs text-stone-400 uppercase tracking-wide mb-1">Treasury balance</p>
+              <p className="text-2xl font-semibold text-stone-900">
                 {fmtUsdc(treasuryBalance)}
-                <span className="text-sm text-gray-400 ml-1.5">USDC</span>
+                <span className="text-sm text-stone-400 ml-1.5">USDC</span>
               </p>
             </div>
             {distributedTotal > 0n && (
-              <p className="text-xs text-gray-400 mb-1">
+              <p className="text-xs text-stone-400 mb-1">
                 distributed to this project:{" "}
-                <span className="text-gray-600 font-medium">
+                <span className="text-stone-600 font-medium">
                   {fmtUsdc(distributedTotal)} USDC
                 </span>
               </p>
@@ -503,29 +503,29 @@ export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboard
                 <button
                   onClick={() => distributeFixed()}
                   disabled={distributing || distDone || treasuryBalance === 0n || fixedTotal === 0n}
-                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white text-sm font-medium rounded-lg transition-colors"
+                  className="px-5 py-2.5 bg-emerald-700 hover:bg-emerald-800 disabled:bg-emerald-300 text-white text-sm font-medium rounded-lg transition-colors"
                 >
                   {distributing ? "Distributing..." : distDone ? "✓ Distributed" : `Distribute to all · ${fmtUsdc(fixedTotal)} USDC`}
                 </button>
                 <button
                   onClick={() => distributeFixed(Array.from(selected))}
                   disabled={distributing || distDone || selected.size === 0}
-                  className="px-5 py-2.5 border border-indigo-200 text-indigo-700 hover:bg-indigo-50 disabled:opacity-40 text-sm font-medium rounded-lg transition-colors"
+                  className="px-5 py-2.5 border border-emerald-200 text-emerald-800 hover:bg-emerald-50 disabled:opacity-40 text-sm font-medium rounded-lg transition-colors"
                 >
                   Distribute selected{selected.size > 0 ? ` · ${fmtUsdc(selectedTotal)} USDC` : ""}
                 </button>
               </div>
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-stone-400">
                 Each participant gets their fixed amount. Tick rows above to pay only some of them.
                 Need funds?{" "}
-                <a href="/treasury" className="text-indigo-600 hover:underline">Top up treasury</a>.
+                <a href="/treasury" className="text-emerald-700 hover:underline">Top up treasury</a>.
               </p>
               {distError && <p className="text-xs text-red-500">{distError}</p>}
             </div>
           ) : (
             <div>
               <div className="flex items-center gap-2">
-                <div className="flex-1 flex items-center border border-gray-200 rounded-lg overflow-hidden focus-within:border-indigo-400 transition-colors">
+                <div className="flex-1 flex items-center border border-stone-200 rounded-lg overflow-hidden focus-within:border-emerald-500 transition-colors">
                   <input
                     type="number"
                     min="0"
@@ -533,22 +533,22 @@ export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboard
                     placeholder="0.00"
                     value={distAmount}
                     onChange={(e) => setDistAmount(e.target.value)}
-                    className="flex-1 px-3 py-2.5 text-sm text-gray-900 outline-none"
+                    className="flex-1 px-3 py-2.5 text-sm text-stone-900 outline-none"
                   />
-                  <span className="px-2 text-xs text-gray-400">USDC</span>
+                  <span className="px-2 text-xs text-stone-400">USDC</span>
                 </div>
                 <button
                   onClick={distributePct}
                   disabled={distributing || distDone || treasuryBalance === 0n}
-                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap"
+                  className="px-5 py-2.5 bg-emerald-700 hover:bg-emerald-800 disabled:bg-emerald-300 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap"
                 >
                   {distributing ? "Distributing..." : distDone ? "✓ Distributed" : "Distribute"}
                 </button>
               </div>
-              <p className="text-xs text-gray-400 mt-2">
+              <p className="text-xs text-stone-400 mt-2">
                 Splits the amount across contributors by their %. Pending contributors&apos; shares are
                 reserved until they accept their invite. Need funds?{" "}
-                <a href="/treasury" className="text-indigo-600 hover:underline">
+                <a href="/treasury" className="text-emerald-700 hover:underline">
                   Top up treasury
                 </a>
                 .
