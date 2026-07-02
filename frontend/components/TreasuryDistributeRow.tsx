@@ -49,18 +49,18 @@ export function TreasuryDistributeRow({
   }
 
   return (
-    <div className="px-4 py-4 border-b border-gray-100 last:border-b-0">
+    <div className="px-4 py-4 border-b border-stone-100 last:border-b-0">
       <div className="flex items-center justify-between gap-3 mb-2">
         <div className="min-w-0">
-          <p className="text-sm font-medium text-gray-900 truncate">{name}</p>
-          <p className="text-xs text-gray-400 font-mono mt-0.5">
+          <p className="text-sm font-medium text-stone-900 truncate">{name}</p>
+          <p className="text-xs text-stone-400 font-mono mt-0.5">
             {contractAddress.slice(0, 8)}...{contractAddress.slice(-6)}
           </p>
         </div>
       </div>
 
       <div className="flex items-center gap-2">
-        <div className="flex-1 flex items-center border border-gray-200 rounded-lg overflow-hidden focus-within:border-indigo-400 transition-colors">
+        <div className="flex-1 flex items-center border border-stone-200 rounded-lg overflow-hidden focus-within:border-emerald-500 transition-colors">
           <input
             type="number"
             min="0"
@@ -68,14 +68,14 @@ export function TreasuryDistributeRow({
             placeholder="0.00"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
-            className="flex-1 px-3 py-2 text-sm text-gray-900 outline-none"
+            className="flex-1 px-3 py-2 text-sm text-stone-900 outline-none"
           />
-          <span className="px-2 text-xs text-gray-400">USDC</span>
+          <span className="px-2 text-xs text-stone-400">USDC</span>
         </div>
         <button
           onClick={handleDistribute}
           disabled={!amountNum || amountNum <= 0 || busy || step === "done"}
-          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap"
+          className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 disabled:bg-emerald-300 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap"
         >
           {step === "distributing" ? "Distributing..." : step === "done" ? "✓ Done" : "Distribute"}
         </button>

@@ -39,7 +39,7 @@ export default function TreasuryPage() {
     <Suspense
       fallback={
         <div className="min-h-screen flex items-center justify-center">
-          <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+          <div className="w-6 h-6 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
         </div>
       }
     >
@@ -193,7 +193,7 @@ function TreasuryInner() {
   if (!ready || !authenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-6 h-6 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -201,15 +201,15 @@ function TreasuryInner() {
   const balanceFormatted = parseFloat(formatUnits(balance, 6)).toFixed(2);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200 px-4 py-3">
+    <div className="min-h-screen bg-stone-50">
+      <header className="bg-white border-b border-stone-200 px-4 py-3">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
-          <a href="/dashboard" className="font-semibold text-gray-900 hover:text-indigo-600 transition-colors">BYN Split Pay</a>
+          <a href="/dashboard" className="flex items-center gap-2 font-semibold text-stone-900 hover:text-emerald-700 transition-colors"><span className="flex h-6 w-6 items-center justify-center rounded-md bg-emerald-700 text-[11px] font-bold text-white">S</span>Splitport</a>
           <div className="flex items-center gap-3">
-            <a href="/dashboard" className="text-sm text-gray-400 hover:text-gray-600 transition-colors">
+            <a href="/dashboard" className="text-sm text-stone-400 hover:text-stone-600 transition-colors">
               Dashboard
             </a>
-            <button onClick={logout} className="text-sm text-gray-400 hover:text-gray-600 transition-colors">
+            <button onClick={logout} className="text-sm text-stone-400 hover:text-stone-600 transition-colors">
               Sign out
             </button>
           </div>
@@ -218,33 +218,33 @@ function TreasuryInner() {
 
       <main className="max-w-2xl mx-auto px-4 py-8 space-y-6">
         <div>
-          <h1 className="text-xl font-semibold text-gray-900">Treasury</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <h1 className="text-xl font-semibold text-stone-900">Treasury</h1>
+          <p className="text-sm text-stone-500 mt-1">
             Top up your platform balance with a card or crypto. Allocating to projects comes next.
           </p>
         </div>
 
         {banner && (
-          <div className="bg-indigo-50 text-indigo-700 text-sm rounded-xl px-4 py-3">{banner}</div>
+          <div className="bg-emerald-50 text-emerald-800 text-sm rounded-xl px-4 py-3">{banner}</div>
         )}
         {error && (
           <div className="bg-red-50 text-red-600 text-sm rounded-xl px-4 py-3">{error}</div>
         )}
 
-        <div className="bg-white border border-gray-200 rounded-2xl p-6">
-          <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Treasury Balance</p>
-          <p className="text-3xl font-semibold text-gray-900">
+        <div className="bg-white border border-stone-200 rounded-2xl p-6">
+          <p className="text-xs text-stone-400 uppercase tracking-wide mb-1">Treasury Balance</p>
+          <p className="text-3xl font-semibold text-stone-900">
             {balanceFormatted}
-            <span className="text-base text-gray-400 ml-1.5">USDC</span>
+            <span className="text-base text-stone-400 ml-1.5">USDC</span>
           </p>
         </div>
 
         <div className="grid sm:grid-cols-2 gap-4">
           {/* Card */}
-          <div className="bg-white border border-gray-200 rounded-2xl p-5 space-y-3">
-            <p className="font-medium text-gray-900 text-sm">Top up with card</p>
-            <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden focus-within:border-indigo-400">
-              <span className="px-2 text-sm text-gray-400">$</span>
+          <div className="bg-white border border-stone-200 rounded-2xl p-5 space-y-3">
+            <p className="font-medium text-stone-900 text-sm">Top up with card</p>
+            <div className="flex items-center border border-stone-200 rounded-lg overflow-hidden focus-within:border-emerald-500">
+              <span className="px-2 text-sm text-stone-400">$</span>
               <input
                 type="number"
                 min="0"
@@ -258,23 +258,23 @@ function TreasuryInner() {
             <button
               onClick={handleCard}
               disabled={cardBusy}
-              className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white font-medium rounded-xl transition-colors text-sm"
+              className="w-full py-2.5 bg-emerald-700 hover:bg-emerald-800 disabled:bg-emerald-300 text-white font-medium rounded-xl transition-colors text-sm"
             >
               {cardBusy ? "Redirecting..." : "Pay with card"}
             </button>
           </div>
 
           {/* Crypto */}
-          <div className="bg-white border border-gray-200 rounded-2xl p-5 space-y-3">
+          <div className="bg-white border border-stone-200 rounded-2xl p-5 space-y-3">
             <div className="flex items-center justify-between">
-              <p className="font-medium text-gray-900 text-sm">Top up with crypto</p>
+              <p className="font-medium text-stone-900 text-sm">Top up with crypto</p>
               {walletBalance !== undefined && (
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-stone-400">
                   wallet: {parseFloat(formatUnits(walletBalance, 6)).toFixed(2)} USDC
                 </p>
               )}
             </div>
-            <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden focus-within:border-indigo-400">
+            <div className="flex items-center border border-stone-200 rounded-lg overflow-hidden focus-within:border-emerald-500">
               <input
                 type="number"
                 min="0"
@@ -284,35 +284,35 @@ function TreasuryInner() {
                 onChange={(e) => setCryptoAmount(e.target.value)}
                 className="flex-1 px-2 py-2 text-sm outline-none"
               />
-              <span className="px-2 text-sm text-gray-400">USDC</span>
+              <span className="px-2 text-sm text-stone-400">USDC</span>
             </div>
             <button
               onClick={handleCrypto}
               disabled={cryptoBusy || !TREASURY_ADDRESS}
-              className="w-full py-2.5 bg-gray-800 hover:bg-gray-900 disabled:bg-gray-400 text-white font-medium rounded-xl transition-colors text-sm"
+              className="w-full py-2.5 bg-stone-800 hover:bg-stone-900 disabled:bg-stone-400 text-white font-medium rounded-xl transition-colors text-sm"
             >
               {cryptoBusy ? "Confirming..." : "Send USDC"}
             </button>
             {!TREASURY_ADDRESS && (
-              <p className="text-xs text-gray-400">Treasury address not configured.</p>
+              <p className="text-xs text-stone-400">Treasury address not configured.</p>
             )}
           </div>
         </div>
 
-        <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-100">
-            <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">
+        <div className="bg-white border border-stone-200 rounded-2xl overflow-hidden">
+          <div className="px-4 py-3 border-b border-stone-100">
+            <p className="text-xs font-medium text-stone-400 uppercase tracking-wide">
               Distribute to a project
             </p>
-            <p className="text-xs text-gray-400 mt-0.5">
+            <p className="text-xs text-stone-400 mt-0.5">
               Splits the amount across the project&apos;s contributors by their %. Each contributor then
               claims their share from their cabinet.
             </p>
           </div>
           {projects.length === 0 ? (
-            <p className="px-4 py-6 text-sm text-gray-400 text-center">
+            <p className="px-4 py-6 text-sm text-stone-400 text-center">
               No projects yet.{" "}
-              <a href="/create" className="text-indigo-600 hover:underline">
+              <a href="/create" className="text-emerald-700 hover:underline">
                 Create one
               </a>
               .
@@ -330,17 +330,17 @@ function TreasuryInner() {
           )}
         </div>
 
-        <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-100">
-            <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Recent top-ups</p>
+        <div className="bg-white border border-stone-200 rounded-2xl overflow-hidden">
+          <div className="px-4 py-3 border-b border-stone-100">
+            <p className="text-xs font-medium text-stone-400 uppercase tracking-wide">Recent top-ups</p>
           </div>
           {deposits.length === 0 ? (
-            <p className="px-4 py-6 text-sm text-gray-400 text-center">No top-ups yet.</p>
+            <p className="px-4 py-6 text-sm text-stone-400 text-center">No top-ups yet.</p>
           ) : (
             deposits.map((d) => (
-              <div key={d.id} className="flex items-center justify-between px-4 py-3 border-b border-gray-50 last:border-0">
+              <div key={d.id} className="flex items-center justify-between px-4 py-3 border-b border-stone-50 last:border-0">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-stone-100 text-stone-600">
                     {d.source === "CARD" ? "Card" : "Crypto"}
                   </span>
                   <span
@@ -355,7 +355,7 @@ function TreasuryInner() {
                     {d.status.toLowerCase()}
                   </span>
                 </div>
-                <span className="text-sm font-medium text-gray-900">
+                <span className="text-sm font-medium text-stone-900">
                   {parseFloat(formatUnits(BigInt(d.amount), 6)).toFixed(2)} USDC
                 </span>
               </div>
@@ -363,27 +363,27 @@ function TreasuryInner() {
           )}
         </div>
 
-        <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-100">
-            <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">
+        <div className="bg-white border border-stone-200 rounded-2xl overflow-hidden">
+          <div className="px-4 py-3 border-b border-stone-100">
+            <p className="text-xs font-medium text-stone-400 uppercase tracking-wide">
               Distributions
             </p>
           </div>
           {distributions.length === 0 ? (
-            <p className="px-4 py-6 text-sm text-gray-400 text-center">No distributions yet.</p>
+            <p className="px-4 py-6 text-sm text-stone-400 text-center">No distributions yet.</p>
           ) : (
             distributions.map((d) => (
               <div
                 key={d.id}
-                className="flex items-center justify-between px-4 py-3 border-b border-gray-50 last:border-0"
+                className="flex items-center justify-between px-4 py-3 border-b border-stone-50 last:border-0"
               >
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">{d.projectName}</p>
-                  <p className="text-xs text-gray-400">
+                  <p className="text-sm font-medium text-stone-900 truncate">{d.projectName}</p>
+                  <p className="text-xs text-stone-400">
                     {new Date(d.createdAt).toLocaleDateString()} · split by contributor %
                   </p>
                 </div>
-                <span className="text-sm font-medium text-gray-900 whitespace-nowrap">
+                <span className="text-sm font-medium text-stone-900 whitespace-nowrap">
                   − {parseFloat(formatUnits(BigInt(d.total), 6)).toFixed(2)} USDC
                 </span>
               </div>

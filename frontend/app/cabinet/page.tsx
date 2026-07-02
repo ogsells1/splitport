@@ -126,7 +126,7 @@ export default function CabinetPage() {
   if (!ready) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-6 h-6 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -136,14 +136,14 @@ export default function CabinetPage() {
     return (
       <div className="min-h-screen flex items-center justify-center p-6 bg-white">
         <div className="w-full max-w-sm space-y-5 text-center">
-          <h1 className="text-xl font-semibold text-gray-900">Your payouts</h1>
-          <p className="text-sm text-gray-500">
+          <h1 className="text-xl font-semibold text-stone-900">Your payouts</h1>
+          <p className="text-sm text-stone-500">
             Sign in to see what you&apos;ve earned and send it to your wallet. No crypto experience
             needed — we&apos;ll create a wallet for you automatically if you don&apos;t have one.
           </p>
           <button
             onClick={login}
-            className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl transition-colors text-sm"
+            className="w-full py-3 bg-emerald-700 hover:bg-emerald-800 text-white font-medium rounded-xl transition-colors text-sm"
           >
             Sign in
           </button>
@@ -155,11 +155,11 @@ export default function CabinetPage() {
   const claimableFormatted = parseFloat(formatUnits(claimable, 6)).toFixed(2);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200 px-4 py-3">
+    <div className="min-h-screen bg-stone-50">
+      <header className="bg-white border-b border-stone-200 px-4 py-3">
         <div className="max-w-xl mx-auto flex items-center justify-between">
-          <a href="/dashboard" className="font-semibold text-gray-900 hover:text-indigo-600 transition-colors">BYN Split Pay</a>
-          <button onClick={logout} className="text-sm text-gray-400 hover:text-gray-600 transition-colors">
+          <a href="/dashboard" className="flex items-center gap-2 font-semibold text-stone-900 hover:text-emerald-700 transition-colors"><span className="flex h-6 w-6 items-center justify-center rounded-md bg-emerald-700 text-[11px] font-bold text-white">S</span>Splitport</a>
+          <button onClick={logout} className="text-sm text-stone-400 hover:text-stone-600 transition-colors">
             Sign out
           </button>
         </div>
@@ -167,8 +167,8 @@ export default function CabinetPage() {
 
       <main className="max-w-xl mx-auto px-4 py-8 space-y-6">
         <div>
-          <h1 className="text-xl font-semibold text-gray-900">Your cabinet</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <h1 className="text-xl font-semibold text-stone-900">Your cabinet</h1>
+          <p className="text-sm text-stone-500 mt-1">
             Money you&apos;ve earned across projects, ready to send to your wallet.
           </p>
         </div>
@@ -178,16 +178,16 @@ export default function CabinetPage() {
         )}
         {error && <div className="bg-red-50 text-red-600 text-sm rounded-xl px-4 py-3">{error}</div>}
 
-        <div className="bg-white border border-gray-200 rounded-2xl p-6 space-y-4">
+        <div className="bg-white border border-stone-200 rounded-2xl p-6 space-y-4">
           <div>
-            <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Available to claim</p>
-            <p className="text-3xl font-semibold text-gray-900">
+            <p className="text-xs text-stone-400 uppercase tracking-wide mb-1">Available to claim</p>
+            <p className="text-3xl font-semibold text-stone-900">
               {claimableFormatted}
-              <span className="text-base text-gray-400 ml-1.5">USDC</span>
+              <span className="text-base text-stone-400 ml-1.5">USDC</span>
             </p>
           </div>
 
-          <div className="bg-indigo-50 text-indigo-800 text-xs rounded-xl px-4 py-3 space-y-1">
+          <div className="bg-emerald-50 text-emerald-800 text-xs rounded-xl px-4 py-3 space-y-1">
             <p className="font-medium">How getting paid works</p>
             <p>
               When you press <b>Claim</b>, your USDC is sent to your crypto wallet (Trust, MetaMask,
@@ -201,15 +201,15 @@ export default function CabinetPage() {
 
           {walletAddress && (
             <div>
-              <p className="text-xs text-gray-400 mb-1">Your wallet</p>
-              <p className="text-xs text-gray-600 font-mono break-all">{walletAddress}</p>
+              <p className="text-xs text-stone-400 mb-1">Your wallet</p>
+              <p className="text-xs text-stone-600 font-mono break-all">{walletAddress}</p>
             </div>
           )}
 
           <button
             onClick={handleClaim}
             disabled={claiming || claimable === 0n}
-            className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white font-medium rounded-xl transition-colors text-sm"
+            className="w-full py-3 bg-emerald-700 hover:bg-emerald-800 disabled:bg-emerald-300 text-white font-medium rounded-xl transition-colors text-sm"
           >
             {claiming
               ? "Sending to your wallet..."
@@ -220,8 +220,8 @@ export default function CabinetPage() {
         </div>
 
         {streams.filter((s) => s.status === "ACTIVE").length > 0 && (
-          <div className="bg-white border border-gray-200 rounded-2xl p-5 space-y-3">
-            <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Streaming in</p>
+          <div className="bg-white border border-stone-200 rounded-2xl p-5 space-y-3">
+            <p className="text-xs font-medium text-stone-400 uppercase tracking-wide">Streaming in</p>
             {streams
               .filter((s) => s.status === "ACTIVE")
               .map((s) => {
@@ -231,18 +231,18 @@ export default function CabinetPage() {
                 return (
                   <div key={s.id} className="space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium text-gray-800">{s.projectName}</p>
-                      <p className="text-sm font-semibold text-indigo-600">
+                      <p className="text-sm font-medium text-stone-800">{s.projectName}</p>
+                      <p className="text-sm font-semibold text-emerald-700">
                         +{parseFloat(formatUnits(BigInt(s.claimable), 6)).toFixed(2)} USDC
                       </p>
                     </div>
-                    <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                    <div className="h-1.5 bg-stone-100 rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-indigo-500 rounded-full transition-all"
+                        className="h-full bg-emerald-600 rounded-full transition-all"
                         style={{ width: `${Math.min(pct, 100)}%` }}
                       />
                     </div>
-                    <p className="text-xs text-gray-400">
+                    <p className="text-xs text-stone-400">
                       {parseFloat(formatUnits(accrued, 6)).toFixed(2)} of{" "}
                       {parseFloat(formatUnits(total, 6)).toFixed(2)} USDC accrued · until{" "}
                       {new Date(s.endAt).toLocaleDateString()}
@@ -250,16 +250,16 @@ export default function CabinetPage() {
                   </div>
                 );
               })}
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-stone-400">
               This keeps growing every second. Claim anytime — it&apos;s included in your total above.
             </p>
           </div>
         )}
 
-        <div className="bg-white border border-gray-200 rounded-2xl p-5 space-y-3">
+        <div className="bg-white border border-stone-200 rounded-2xl p-5 space-y-3">
           <div>
-            <p className="text-sm font-medium text-gray-900">See your money in your wallet</p>
-            <p className="text-sm text-gray-500 mt-0.5">
+            <p className="text-sm font-medium text-stone-900">See your money in your wallet</p>
+            <p className="text-sm text-stone-500 mt-0.5">
               Add the Arc Testnet network and the USDC token so your balance shows up in Trust,
               MetaMask, or your wallet app.
             </p>
@@ -267,44 +267,44 @@ export default function CabinetPage() {
           <div className="grid grid-cols-2 gap-2">
             <button
               onClick={addArcNetwork}
-              className="py-2.5 border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-xl transition-colors"
+              className="py-2.5 border border-stone-200 hover:bg-stone-50 text-stone-700 text-sm font-medium rounded-xl transition-colors"
             >
               Add Arc network
             </button>
             <button
               onClick={addUsdcToken}
-              className="py-2.5 border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-xl transition-colors"
+              className="py-2.5 border border-stone-200 hover:bg-stone-50 text-stone-700 text-sm font-medium rounded-xl transition-colors"
             >
               Add USDC token
             </button>
           </div>
-          {walletMsg && <p className="text-xs text-gray-500">{walletMsg}</p>}
-          <p className="text-xs text-gray-400">
+          {walletMsg && <p className="text-xs text-stone-500">{walletMsg}</p>}
+          <p className="text-xs text-stone-400">
             Using the built-in wallet? Your balance is always shown here — adding to an app is only
             needed for external wallets.
           </p>
         </div>
 
-        <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-100">
-            <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">History</p>
+        <div className="bg-white border border-stone-200 rounded-2xl overflow-hidden">
+          <div className="px-4 py-3 border-b border-stone-100">
+            <p className="text-xs font-medium text-stone-400 uppercase tracking-wide">History</p>
           </div>
           {payouts.length === 0 ? (
-            <p className="px-4 py-6 text-sm text-gray-400 text-center">No payouts yet.</p>
+            <p className="px-4 py-6 text-sm text-stone-400 text-center">No payouts yet.</p>
           ) : (
             payouts.map((p) => (
               <div
                 key={p.id}
-                className="flex items-center justify-between px-4 py-3 border-b border-gray-50 last:border-0"
+                className="flex items-center justify-between px-4 py-3 border-b border-stone-50 last:border-0"
               >
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">{p.projectName}</p>
+                  <p className="text-sm font-medium text-stone-900 truncate">{p.projectName}</p>
                   {p.status === "CLAIMED" && p.txHash ? (
                     <a
                       href={`https://testnet.arcscan.app/tx/${p.txHash.split("-")[0]}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs text-indigo-500 hover:text-indigo-700"
+                      className="text-xs text-emerald-600 hover:text-emerald-800"
                     >
                       claimed ↗
                     </a>
@@ -312,7 +312,7 @@ export default function CabinetPage() {
                     <span className="text-xs text-amber-600">pending</span>
                   )}
                 </div>
-                <span className="text-sm font-medium text-gray-900 whitespace-nowrap">
+                <span className="text-sm font-medium text-stone-900 whitespace-nowrap">
                   {parseFloat(formatUnits(BigInt(p.amount), 6)).toFixed(2)} USDC
                 </span>
               </div>

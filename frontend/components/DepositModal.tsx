@@ -81,7 +81,7 @@ export function DepositModal({ vaultAddress }: DepositModalProps) {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center justify-center gap-2 py-3 px-4 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-medium rounded-xl transition-colors text-sm"
+        className="flex items-center justify-center gap-2 py-3 px-4 bg-white border border-stone-200 hover:bg-stone-50 text-stone-700 font-medium rounded-xl transition-colors text-sm"
       >
         <span>＋</span> Deposit USDC
       </button>
@@ -92,18 +92,18 @@ export function DepositModal({ vaultAddress }: DepositModalProps) {
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/40">
       <div className="bg-white rounded-2xl w-full max-w-sm p-6 space-y-5">
         <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-gray-900">Deposit USDC</h3>
+          <h3 className="font-semibold text-stone-900">Deposit USDC</h3>
           <button
             onClick={() => { setOpen(false); setStep("idle"); setAmount(""); }}
-            className="text-gray-400 hover:text-gray-600 text-xl leading-none"
+            className="text-stone-400 hover:text-stone-600 text-xl leading-none"
           >
             ×
           </button>
         </div>
 
         <div>
-          <label className="block text-sm text-gray-500 mb-1.5">Amount</label>
-          <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden focus-within:border-indigo-400 transition-colors">
+          <label className="block text-sm text-stone-500 mb-1.5">Amount</label>
+          <div className="flex items-center border border-stone-200 rounded-xl overflow-hidden focus-within:border-emerald-500 transition-colors">
             <input
               type="number"
               min="0"
@@ -111,9 +111,9 @@ export function DepositModal({ vaultAddress }: DepositModalProps) {
               placeholder="0.00"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              className="flex-1 px-4 py-3 text-gray-900 text-lg outline-none"
+              className="flex-1 px-4 py-3 text-stone-900 text-lg outline-none"
             />
-            <span className="px-3 text-gray-400 text-sm font-medium">USDC</span>
+            <span className="px-3 text-stone-400 text-sm font-medium">USDC</span>
           </div>
         </div>
 
@@ -123,7 +123,7 @@ export function DepositModal({ vaultAddress }: DepositModalProps) {
           </p>
         )}
 
-        <div className="text-xs text-gray-400 bg-gray-50 rounded-lg px-3 py-2 space-y-1">
+        <div className="text-xs text-stone-400 bg-stone-50 rounded-lg px-3 py-2 space-y-1">
           <p>1. Approve USDC spending</p>
           <p>2. Deposit to vault</p>
           <p>3. Distribute to contributors</p>
@@ -132,7 +132,7 @@ export function DepositModal({ vaultAddress }: DepositModalProps) {
         <button
           onClick={handleDeposit}
           disabled={!amount || amountParsed === 0n || step === "approving" || step === "depositing" || step === "done"}
-          className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white font-medium rounded-xl transition-colors text-sm"
+          className="w-full py-3 bg-emerald-700 hover:bg-emerald-800 disabled:bg-emerald-300 text-white font-medium rounded-xl transition-colors text-sm"
         >
           {step === "approving" || step === "depositing" ? (
             <span className="flex items-center justify-center gap-2">

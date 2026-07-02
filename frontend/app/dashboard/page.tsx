@@ -48,7 +48,7 @@ export default function DashboardHub() {
   if (!ready || !authenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-6 h-6 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -56,15 +56,15 @@ export default function DashboardHub() {
   const claimableFormatted = parseFloat(formatUnits(claimable, 6)).toFixed(2);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200 px-4 py-3">
+    <div className="min-h-screen bg-stone-50">
+      <header className="bg-white border-b border-stone-200 px-4 py-3">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
-          <a href="/dashboard" className="font-semibold text-gray-900 hover:text-indigo-600 transition-colors">BYN Split Pay</a>
+          <a href="/dashboard" className="flex items-center gap-2 font-semibold text-stone-900 hover:text-emerald-700 transition-colors"><span className="flex h-6 w-6 items-center justify-center rounded-md bg-emerald-700 text-[11px] font-bold text-white">S</span>Splitport</a>
           <div className="flex items-center gap-3">
-            <a href="/treasury" className="text-sm text-gray-400 hover:text-gray-600 transition-colors">
+            <a href="/treasury" className="text-sm text-stone-400 hover:text-stone-600 transition-colors">
               Treasury
             </a>
-            <button onClick={logout} className="text-sm text-gray-400 hover:text-gray-600 transition-colors">
+            <button onClick={logout} className="text-sm text-stone-400 hover:text-stone-600 transition-colors">
               Sign out
             </button>
           </div>
@@ -72,68 +72,68 @@ export default function DashboardHub() {
       </header>
 
       <main className="max-w-2xl mx-auto px-4 py-8 space-y-6">
-        <h1 className="text-xl font-semibold text-gray-900">Home</h1>
+        <h1 className="text-xl font-semibold text-stone-900">Home</h1>
 
         {/* As a contributor */}
-        <div className="bg-white border border-gray-200 rounded-2xl p-5">
+        <div className="bg-white border border-stone-200 rounded-2xl p-5">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-sm font-medium text-gray-900">Your cabinet</p>
-              <p className="text-sm text-gray-500 mt-0.5">
+              <p className="text-sm font-medium text-stone-900">Your cabinet</p>
+              <p className="text-sm text-stone-500 mt-0.5">
                 Money you&apos;ve earned as a contributor.
               </p>
             </div>
             <div className="text-right">
-              <p className="text-lg font-semibold text-gray-900">
+              <p className="text-lg font-semibold text-stone-900">
                 {claimableFormatted}
-                <span className="text-xs text-gray-400 ml-1">USDC</span>
+                <span className="text-xs text-stone-400 ml-1">USDC</span>
               </p>
-              <p className="text-xs text-gray-400">to claim</p>
+              <p className="text-xs text-stone-400">to claim</p>
             </div>
           </div>
           <button
             onClick={() => router.push("/cabinet")}
-            className="mt-4 w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-xl transition-colors"
+            className="mt-4 w-full py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-medium rounded-xl transition-colors"
           >
             Open cabinet
           </button>
         </div>
 
         {/* As a creator */}
-        <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
-          <div className="px-5 py-4 flex items-center justify-between border-b border-gray-100">
+        <div className="bg-white border border-stone-200 rounded-2xl overflow-hidden">
+          <div className="px-5 py-4 flex items-center justify-between border-b border-stone-100">
             <div>
-              <p className="text-sm font-medium text-gray-900">Your projects</p>
-              <p className="text-sm text-gray-500 mt-0.5">Projects you create and manage.</p>
+              <p className="text-sm font-medium text-stone-900">Your projects</p>
+              <p className="text-sm text-stone-500 mt-0.5">Projects you create and manage.</p>
             </div>
             <button
               onClick={() => router.push("/create")}
-              className="text-sm text-indigo-600 hover:text-indigo-700 font-medium whitespace-nowrap"
+              className="text-sm text-emerald-700 hover:text-emerald-800 font-medium whitespace-nowrap"
             >
               + New
             </button>
           </div>
 
           {loading ? (
-            <p className="px-5 py-6 text-sm text-gray-400 text-center">Loading...</p>
+            <p className="px-5 py-6 text-sm text-stone-400 text-center">Loading...</p>
           ) : projects.length === 0 ? (
-            <p className="px-5 py-6 text-sm text-gray-400 text-center">
+            <p className="px-5 py-6 text-sm text-stone-400 text-center">
               No projects yet.{" "}
-              <a href="/create" className="text-indigo-600 hover:underline">
+              <a href="/create" className="text-emerald-700 hover:underline">
                 Create your first
               </a>
               .
             </p>
           ) : (
-            <div className="divide-y divide-gray-100">
+            <div className="divide-y divide-stone-100">
               {projects.map((p) => (
                 <button
                   key={p.id}
                   onClick={() => router.push(`/dashboard/${p.contractAddress}`)}
-                  className="w-full text-left px-5 py-3 hover:bg-gray-50 transition-colors flex items-center justify-between"
+                  className="w-full text-left px-5 py-3 hover:bg-stone-50 transition-colors flex items-center justify-between"
                 >
-                  <span className="text-sm font-medium text-gray-900">{p.name}</span>
-                  <span className="text-xs text-gray-400">{p.contributorCount} contributors</span>
+                  <span className="text-sm font-medium text-stone-900">{p.name}</span>
+                  <span className="text-xs text-stone-400">{p.contributorCount} contributors</span>
                 </button>
               ))}
             </div>
