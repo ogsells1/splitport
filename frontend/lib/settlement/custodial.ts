@@ -113,12 +113,65 @@ export class CustodialSettlement implements SettlementProvider {
       }
 
       if (pickedPayouts.length === 0 && pickedStreams.length === 0) {
-        throw Object.assign(
-          new Error(
-            `Payout wallet balance (${formatUnits(onChainBalance, 6)} USDC) is too low to cover even the smallest pending item. Top it up and try again.`
-          ),
-          { status: 409 }
-        );
+        // No whole item fits — do a partial transfer of everything available.
+        // The first (smallest) payout is partially paid; its remaining amount
+        // stays PENDING so the user can claim the rest once executor is topped up.
+        const partialGross = onChainBalance;
+        let partialFee: bigint;
+        try {
+          const gas = await publicClient.estimateContractGas({
+            address: usdc, abi: USDC_ABI, functionName: "transfer",
+            args: [to, partialGross], account,
+          });
+          const gasPrice = await publicClient.getGasPrice();
+          partialFee = ((gas * gasPrice * 12n) / 10n) / 10n ** 12n;
+        } catch {
+          partialFee = 0n;
+        }
+        const partialNet = partialGross > partialFee ? partialGross - partialFee : 0n;
+        if (partialNet === 0n) {
+          throw Object.assign(
+            new Error(
+              `Payout wallet balance (${formatUnits(onChainBalance, 6)} USDC) is too low to cover the transfer fee. Top it up and try again.`
+            ),
+            { status: 409 }
+          );
+        }
+
+        const partialTxHash = await walletClient.writeContract({
+          address: usdc, abi: USDC_ABI, functionName: "transfer", args: [to, partialNet],
+        });
+        await publicClient.waitForTransactionReceipt({ hash: partialTxHash });
+
+        // Reduce the first payout by the net transferred; keep it PENDING for the rest.
+        const target = items[0]; // smallest item
+        if (target.kind === "payout") {
+          const remaining = target.amount - partialNet;
+          await prisma.payout.update({
+            where: { id: target.data.id },
+            data: remaining > 0n
+              ? { amount: remaining }
+              : { status: "CLAIMED", txHash: partialTxHash, netAmount: partialNet, feeAmount: partialFee, claimedAt: new Date() },
+          });
+        } else {
+          // stream share — advance claimedAmount
+          await prisma.streamShare.update({
+            where: { id: target.data.share.id },
+            data: { claimedAmount: target.data.share.claimedAmount + partialNet },
+          });
+          await prisma.streamClaim.create({
+            data: {
+              shareId: target.data.share.id,
+              amount: partialNet + partialFee,
+              feeAmount: partialFee,
+              netAmount: partialNet,
+              txHash: partialTxHash,
+              claimedAt: new Date(),
+            },
+          });
+        }
+
+        return { txHash: partialTxHash, gross: partialGross, fee: partialFee, net: partialNet };
       }
 
       selectedPayouts = pickedPayouts;
