@@ -4,11 +4,20 @@
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireUser, authErrorResponse } from "@/lib/auth";
 
 const DEFAULT_USDC_ADDRESS = "0x3600000000000000000000000000000000000000";
 const DEFAULT_CHAIN_ID = 5042002;
 
 export async function GET(request: Request) {
+  let requesterPrivyId: string;
+  try {
+    requesterPrivyId = await requireUser(request);
+  } catch (e) {
+    const { error, status } = authErrorResponse(e);
+    return NextResponse.json({ error }, { status });
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const contractAddress = searchParams.get("contractAddress");
@@ -20,6 +29,7 @@ export async function GET(request: Request) {
     const project = await prisma.project.findUnique({
       where: { contractAddress },
       include: {
+        owner: { select: { privyId: true } },
         contributors: {
           where: { active: true },
           orderBy: { percentage: "desc" },
@@ -29,6 +39,9 @@ export async function GET(request: Request) {
 
     if (!project) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
+    if (project.owner.privyId !== requesterPrivyId) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     return NextResponse.json({
@@ -56,17 +69,34 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  let ownerPrivyId: string;
+  try {
+    ownerPrivyId = await requireUser(request);
+  } catch (e) {
+    const { error, status } = authErrorResponse(e);
+    return NextResponse.json({ error }, { status });
+  }
+
   try {
     const body = await request.json();
-    const { ownerPrivyId, name, contractAddress, usdcAddress, deployBlock, contributors } = body;
+    const { name, contractAddress, usdcAddress, deployBlock, contributors } = body;
 
-    if (!ownerPrivyId || !contractAddress || !contributors?.length) {
+    if (!contractAddress || !contributors?.length) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
     const totalBps = contributors.reduce((s: number, c: any) => s + c.percentage, 0);
     if (totalBps !== 10000) {
       return NextResponse.json({ error: "Contributors percentages must sum to 10000" }, { status: 400 });
+    }
+
+    // If the project already exists, only its owner may update it.
+    const existing = await prisma.project.findUnique({
+      where: { contractAddress },
+      include: { owner: { select: { privyId: true } } },
+    });
+    if (existing && existing.owner.privyId !== ownerPrivyId) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const project = await prisma.project.upsert({

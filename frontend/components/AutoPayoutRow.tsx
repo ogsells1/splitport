@@ -5,6 +5,7 @@
 // by /api/treasury/schedule; a daily cron actually runs due schedules.
 
 import { useCallback, useEffect, useState } from "react";
+import { authedFetch } from "@/lib/apiClient";
 import { formatUnits } from "viem";
 
 type Frequency = "WEEKLY" | "MONTHLY" | "CUSTOM";
@@ -53,7 +54,7 @@ export function AutoPayoutRow({ address, ownerPrivyId, splitMode = "PERCENTAGE",
   const load = useCallback(async () => {
     if (!ownerPrivyId) return;
     try {
-      const res = await fetch(
+      const res = await authedFetch(
         `/api/treasury/schedule?contractAddress=${encodeURIComponent(
           address
         )}&ownerPrivyId=${encodeURIComponent(ownerPrivyId)}`
@@ -99,7 +100,7 @@ export function AutoPayoutRow({ address, ownerPrivyId, splitMode = "PERCENTAGE",
     }
     setSaving(true);
     try {
-      const res = await fetch("/api/treasury/schedule", {
+      const res = await authedFetch("/api/treasury/schedule", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -125,7 +126,7 @@ export function AutoPayoutRow({ address, ownerPrivyId, splitMode = "PERCENTAGE",
   async function turnOff() {
     setSaving(true);
     try {
-      await fetch(
+      await authedFetch(
         `/api/treasury/schedule?contractAddress=${encodeURIComponent(
           address
         )}&ownerPrivyId=${encodeURIComponent(ownerPrivyId)}`,

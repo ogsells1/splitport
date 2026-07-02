@@ -6,8 +6,17 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getStripe } from "@/lib/stripe";
+import { requireUser, authErrorResponse } from "@/lib/auth";
 
 export async function POST(request: Request) {
+  let userPrivyId: string;
+  try {
+    userPrivyId = await requireUser(request);
+  } catch (e) {
+    const { error, status } = authErrorResponse(e);
+    return NextResponse.json({ error }, { status });
+  }
+
   try {
     const stripe = getStripe();
     if (!stripe) {
@@ -18,11 +27,11 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { userPrivyId, amountUsd } = body;
+    const { amountUsd } = body;
 
     const amount = Number(amountUsd);
-    if (!userPrivyId || !Number.isFinite(amount) || amount <= 0) {
-      return NextResponse.json({ error: "userPrivyId and a positive amountUsd are required" }, { status: 400 });
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return NextResponse.json({ error: "A positive amountUsd is required" }, { status: 400 });
     }
 
     // 1 USD = 1 USDC (6 decimals) on testnet.

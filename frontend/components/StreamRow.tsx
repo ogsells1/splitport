@@ -6,6 +6,7 @@
 // pull accrued funds anytime from their cabinet.
 
 import { useCallback, useEffect, useState } from "react";
+import { authedFetch } from "@/lib/apiClient";
 import { formatUnits } from "viem";
 
 type StreamStatus = "ACTIVE" | "CANCELED";
@@ -79,7 +80,7 @@ export function StreamRow({ address, ownerPrivyId, splitMode = "PERCENTAGE", fix
   const load = useCallback(async () => {
     if (!ownerPrivyId) return;
     try {
-      const res = await fetch(
+      const res = await authedFetch(
         `/api/treasury/streams?contractAddress=${encodeURIComponent(
           address
         )}&ownerPrivyId=${encodeURIComponent(ownerPrivyId)}`
@@ -118,7 +119,7 @@ export function StreamRow({ address, ownerPrivyId, splitMode = "PERCENTAGE", fix
     }
     setSaving(true);
     try {
-      const res = await fetch("/api/treasury/streams", {
+      const res = await authedFetch("/api/treasury/streams", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -146,7 +147,7 @@ export function StreamRow({ address, ownerPrivyId, splitMode = "PERCENTAGE", fix
   }
 
   async function cancel(id: string) {
-    await fetch(
+    await authedFetch(
       `/api/treasury/streams?id=${id}&ownerPrivyId=${encodeURIComponent(ownerPrivyId)}`,
       { method: "DELETE" }
     );

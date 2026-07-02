@@ -8,16 +8,18 @@ import { isAddress } from "viem";
 import { prisma } from "@/lib/prisma";
 import { getAvailableBalance } from "@/lib/treasuryBalance";
 import { getSettlement } from "@/lib/settlement";
+import { requireUser, authErrorResponse } from "@/lib/auth";
 
 export async function GET(request: Request) {
+  let userPrivyId: string;
   try {
-    const { searchParams } = new URL(request.url);
-    const userPrivyId = searchParams.get("userPrivyId");
+    userPrivyId = await requireUser(request);
+  } catch (e) {
+    const { error, status } = authErrorResponse(e);
+    return NextResponse.json({ error }, { status });
+  }
 
-    if (!userPrivyId) {
-      return NextResponse.json({ error: "userPrivyId is required" }, { status: 400 });
-    }
-
+  try {
     const user = await prisma.user.findUnique({ where: { privyId: userPrivyId } });
     if (!user) {
       return NextResponse.json({ balance: "0", deposits: [], distributions: [] });

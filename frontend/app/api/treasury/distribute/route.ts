@@ -8,15 +8,24 @@
 import { NextResponse } from "next/server";
 import { parseUnits } from "viem";
 import { runDistribution, DistributionError } from "@/lib/distribute";
+import { requireUser, authErrorResponse } from "@/lib/auth";
 
 export async function POST(request: Request) {
+  let ownerPrivyId: string;
+  try {
+    ownerPrivyId = await requireUser(request);
+  } catch (e) {
+    const { error, status } = authErrorResponse(e);
+    return NextResponse.json({ error }, { status });
+  }
+
   try {
     const body = await request.json();
-    const { ownerPrivyId, contractAddress, amount, contributorIds } = body;
+    const { contractAddress, amount, contributorIds } = body;
 
-    if (!ownerPrivyId || !contractAddress) {
+    if (!contractAddress) {
       return NextResponse.json(
-        { error: "ownerPrivyId and contractAddress are required" },
+        { error: "contractAddress is required" },
         { status: 400 }
       );
     }

@@ -11,6 +11,7 @@ import { createPublicClient, http, parseAbiItem, getAddress, isAddress, type Has
 import { prisma } from "@/lib/prisma";
 import { USDC_ADDRESS } from "@/lib/contract";
 import { arcTestnet } from "@/lib/executor";
+import { requireUser, authErrorResponse } from "@/lib/auth";
 
 const client = createPublicClient({ chain: arcTestnet, transport: http() });
 
@@ -19,12 +20,20 @@ const TRANSFER_EVENT = parseAbiItem(
 );
 
 export async function POST(request: Request) {
+  let userPrivyId: string;
+  try {
+    userPrivyId = await requireUser(request);
+  } catch (e) {
+    const { error, status } = authErrorResponse(e);
+    return NextResponse.json({ error }, { status });
+  }
+
   try {
     const body = await request.json();
-    const { userPrivyId, txHash, contractAddress } = body;
+    const { txHash, contractAddress } = body;
 
-    if (!userPrivyId || !txHash || typeof txHash !== "string") {
-      return NextResponse.json({ error: "userPrivyId and txHash are required" }, { status: 400 });
+    if (!txHash || typeof txHash !== "string") {
+      return NextResponse.json({ error: "txHash is required" }, { status: 400 });
     }
 
     // Determine destination address to verify the transfer against.

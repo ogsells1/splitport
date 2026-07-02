@@ -7,13 +7,22 @@ import { NextResponse } from "next/server";
 import { randomBytes } from "crypto";
 import { parseUnits, isAddress } from "viem";
 import { prisma } from "@/lib/prisma";
+import { requireUser, authErrorResponse } from "@/lib/auth";
 
 export async function POST(request: Request) {
+  let ownerPrivyId: string;
+  try {
+    ownerPrivyId = await requireUser(request);
+  } catch (e) {
+    const { error, status } = authErrorResponse(e);
+    return NextResponse.json({ error }, { status });
+  }
+
   try {
     const body = await request.json();
-    const { ownerPrivyId, contractAddress, role, percentage, amount, wallet } = body;
+    const { contractAddress, role, percentage, amount, wallet } = body;
 
-    if (!ownerPrivyId || !contractAddress || !role) {
+    if (!contractAddress || !role) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 

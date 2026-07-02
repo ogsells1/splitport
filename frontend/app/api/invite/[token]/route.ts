@@ -8,6 +8,7 @@ import { getAddress, isAddress, type Address } from "viem";
 import { prisma } from "@/lib/prisma";
 import { getExecutor } from "@/lib/executor";
 import { VAULT_ABI } from "@/lib/contract";
+import { requireUser, requireWallet, authErrorResponse } from "@/lib/auth";
 
 export async function GET(
   _request: Request,
@@ -46,10 +47,18 @@ export async function POST(
   try {
     const { token } = params;
     const body = await request.json();
-    const { wallet, privyId } = body;
+    const { wallet } = body;
 
-    if (!wallet || !isAddress(wallet) || !privyId) {
-      return NextResponse.json({ error: "Valid wallet and privyId are required" }, { status: 400 });
+    if (!wallet || !isAddress(wallet)) {
+      return NextResponse.json({ error: "A valid wallet is required" }, { status: 400 });
+    }
+
+    let privyId: string;
+    try {
+      privyId = await requireWallet(request, wallet);
+    } catch (e) {
+      const { error, status } = authErrorResponse(e);
+      return NextResponse.json({ error }, { status });
     }
 
     const contributor = await prisma.contributor.findUnique({
@@ -142,10 +151,16 @@ export async function DELETE(
   request: Request,
   { params }: { params: { token: string } }
 ) {
+  let ownerPrivyId: string;
+  try {
+    ownerPrivyId = await requireUser(request);
+  } catch (e) {
+    const { error, status } = authErrorResponse(e);
+    return NextResponse.json({ error }, { status });
+  }
+
   try {
     const { token } = params;
-    const { searchParams } = new URL(request.url);
-    const ownerPrivyId = searchParams.get("ownerPrivyId");
 
     const contributor = await prisma.contributor.findUnique({
       where: { inviteToken: token },
@@ -155,7 +170,7 @@ export async function DELETE(
     if (!contributor) {
       return NextResponse.json({ error: "Invite not found" }, { status: 404 });
     }
-    if (!ownerPrivyId || contributor.project.owner.privyId !== ownerPrivyId) {
+    if (contributor.project.owner.privyId !== ownerPrivyId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     if (contributor.status === "CLAIMED") {

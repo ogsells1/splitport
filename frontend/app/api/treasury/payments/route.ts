@@ -9,6 +9,7 @@
 import { NextResponse } from "next/server";
 import { parseUnits } from "viem";
 import { prisma } from "@/lib/prisma";
+import { requireUser, authErrorResponse } from "@/lib/auth";
 
 async function ownedProject(contractAddress: string, ownerPrivyId: string) {
   const project = await prisma.project.findUnique({
@@ -45,13 +46,20 @@ function serialize(p: {
 }
 
 export async function GET(request: Request) {
+  let ownerPrivyId: string;
+  try {
+    ownerPrivyId = await requireUser(request);
+  } catch (e) {
+    const { error, status } = authErrorResponse(e);
+    return NextResponse.json({ error }, { status });
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const contractAddress = searchParams.get("contractAddress");
-    const ownerPrivyId = searchParams.get("ownerPrivyId");
-    if (!contractAddress || !ownerPrivyId) {
+    if (!contractAddress) {
       return NextResponse.json(
-        { error: "contractAddress and ownerPrivyId are required" },
+        { error: "contractAddress is required" },
         { status: 400 }
       );
     }
@@ -73,13 +81,21 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  let ownerPrivyId: string;
+  try {
+    ownerPrivyId = await requireUser(request);
+  } catch (e) {
+    const { error, status } = authErrorResponse(e);
+    return NextResponse.json({ error }, { status });
+  }
+
   try {
     const body = await request.json();
-    const { ownerPrivyId, contractAddress, amount, runAt } = body;
+    const { contractAddress, amount, runAt } = body;
 
-    if (!ownerPrivyId || !contractAddress) {
+    if (!contractAddress) {
       return NextResponse.json(
-        { error: "ownerPrivyId and contractAddress are required" },
+        { error: "contractAddress is required" },
         { status: 400 }
       );
     }
@@ -129,12 +145,19 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  let ownerPrivyId: string;
+  try {
+    ownerPrivyId = await requireUser(request);
+  } catch (e) {
+    const { error, status } = authErrorResponse(e);
+    return NextResponse.json({ error }, { status });
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
-    const ownerPrivyId = searchParams.get("ownerPrivyId");
-    if (!id || !ownerPrivyId) {
-      return NextResponse.json({ error: "id and ownerPrivyId are required" }, { status: 400 });
+    if (!id) {
+      return NextResponse.json({ error: "id is required" }, { status: 400 });
     }
 
     const payment = await prisma.scheduledPayout.findUnique({

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { authedFetch } from "@/lib/apiClient";
 import { usePrivy } from "@privy-io/react-auth";
 import { useRouter } from "next/navigation";
 import { isAddress } from "viem";
@@ -73,7 +74,7 @@ export default function CreateProjectPage() {
     setErrorMsg("");
     setBusy(true);
     try {
-      const res = await fetch("/api/project/create", {
+      const res = await authedFetch("/api/project/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

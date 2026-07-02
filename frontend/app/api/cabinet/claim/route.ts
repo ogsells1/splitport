@@ -13,6 +13,7 @@ import { getSettlement } from "@/lib/settlement";
 import { getExecutor } from "@/lib/executor";
 import { USDC_ADDRESS, USDC_ABI } from "@/lib/contract";
 import { claimableNow } from "@/lib/stream";
+import { requireWallet, authErrorResponse } from "@/lib/auth";
 
 export async function POST(request: Request) {
   try {
@@ -20,6 +21,13 @@ export async function POST(request: Request) {
     const { wallet } = body;
     if (!wallet || !isAddress(wallet)) {
       return NextResponse.json({ error: "A valid wallet is required" }, { status: 400 });
+    }
+
+    try {
+      await requireWallet(request, wallet);
+    } catch (e) {
+      const { error, status } = authErrorResponse(e);
+      return NextResponse.json({ error }, { status });
     }
 
     const settlement = getSettlement();

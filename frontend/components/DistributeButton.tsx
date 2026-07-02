@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { authedFetch } from "@/lib/apiClient";
 import { useWriteContract, useReadContract, usePublicClient } from "wagmi";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatUnits, parseUnits, type Address } from "viem";
@@ -63,7 +64,7 @@ export function DistributeButton({ vaultAddress }: DistributeButtonProps) {
       await publicClient?.waitForTransactionReceipt({ hash: txHash });
       queryClient.invalidateQueries();
 
-      fetch(`/api/transactions/sync?contractAddress=${vaultAddress}`, { method: "POST" }).catch(() => {});
+      authedFetch(`/api/transactions/sync?contractAddress=${vaultAddress}`, { method: "POST" }).catch(() => {});
 
       setStatus("done");
       setTimeout(() => {

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
+import { authedFetch } from "@/lib/apiClient";
 
 type InviteInfo = {
   projectName: string;
@@ -39,10 +40,10 @@ export default function InvitePage({ params }: { params: { token: string } }) {
     setClaimState("claiming");
     setClaimError("");
     try {
-      const res = await fetch(`/api/invite/${token}`, {
+      const res = await authedFetch(`/api/invite/${token}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ wallet: walletAddress, privyId: user.id }),
+        body: JSON.stringify({ wallet: walletAddress }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Failed to claim invite");
@@ -84,7 +85,7 @@ export default function InvitePage({ params }: { params: { token: string } }) {
       <Centered>
         <div className="text-center space-y-4 max-w-sm">
           <p className="text-2xl">✓</p>
-          <p className="text-gray-900 font-medium">You're in!</p>
+          <p className="text-gray-900 font-medium">You&apos;re in!</p>
           <p className="text-gray-500 text-sm">
             Your wallet is linked. When the project owner sends out payments, your share will show
             up in your cabinet — sign in any time to claim it to your wallet.
@@ -104,7 +105,7 @@ export default function InvitePage({ params }: { params: { token: string } }) {
     <Centered>
       <div className="w-full max-w-sm space-y-5 text-center">
         <div>
-          <p className="text-gray-400 text-xs uppercase tracking-wide">You're invited to</p>
+          <p className="text-gray-400 text-xs uppercase tracking-wide">You&apos;re invited to</p>
           <h1 className="text-xl font-semibold text-gray-900">{invite.projectName}</h1>
         </div>
 

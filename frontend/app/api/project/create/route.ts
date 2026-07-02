@@ -11,6 +11,7 @@ import { getAddress, isAddress, parseEventLogs, parseUnits, type Address } from 
 import { prisma } from "@/lib/prisma";
 import { getExecutor } from "@/lib/executor";
 import { FACTORY_ABI } from "@/lib/contract";
+import { requireUser, authErrorResponse } from "@/lib/auth";
 
 const DEFAULT_USDC_ADDRESS = "0x3600000000000000000000000000000000000000";
 const DEFAULT_CHAIN_ID = 5042002;
@@ -23,17 +24,24 @@ interface RowInput {
 }
 
 export async function POST(request: Request) {
+  let ownerPrivyId: string;
+  try {
+    ownerPrivyId = await requireUser(request);
+  } catch (e) {
+    const { error, status } = authErrorResponse(e);
+    return NextResponse.json({ error }, { status });
+  }
+
   try {
     const body = await request.json();
-    const { ownerPrivyId, name, usdcAddress, splitMode: rawMode, contributors } = body as {
-      ownerPrivyId?: string;
+    const { name, usdcAddress, splitMode: rawMode, contributors } = body as {
       name?: string;
       usdcAddress?: string;
       splitMode?: string;
       contributors?: RowInput[];
     };
 
-    if (!ownerPrivyId || !name?.trim() || !contributors?.length) {
+    if (!name?.trim() || !contributors?.length) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 

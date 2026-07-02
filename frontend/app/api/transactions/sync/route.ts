@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createPublicClient, http, parseAbiItem } from "viem";
+import { requireUser, authErrorResponse, isCronAuthorized } from "@/lib/auth";
 
 const arcTestnet = {
   id: 5042002,
@@ -154,13 +155,14 @@ async function syncProject(project: {
   };
 }
 
-function isAuthorizedCron(request: NextRequest) {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return true; // no secret configured — allow (dev/local)
-  return request.headers.get("authorization") === `Bearer ${secret}`;
-}
-
 export async function POST(request: NextRequest) {
+  try {
+    await requireUser(request);
+  } catch (e) {
+    const { error, status } = authErrorResponse(e);
+    return NextResponse.json({ error }, { status });
+  }
+
   try {
     const contractAddress = request.nextUrl.searchParams.get("contractAddress");
     if (!contractAddress) {
@@ -184,7 +186,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-  if (!isAuthorizedCron(request)) {
+  if (!isCronAuthorized(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   try {

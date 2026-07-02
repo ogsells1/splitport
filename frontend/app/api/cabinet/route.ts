@@ -7,6 +7,7 @@ import { NextResponse } from "next/server";
 import { isAddress } from "viem";
 import { prisma } from "@/lib/prisma";
 import { claimableNow, accruedAmount } from "@/lib/stream";
+import { requireWallet, authErrorResponse } from "@/lib/auth";
 
 export async function GET(request: Request) {
   try {
@@ -15,6 +16,13 @@ export async function GET(request: Request) {
 
     if (!wallet || !isAddress(wallet)) {
       return NextResponse.json({ error: "A valid wallet is required" }, { status: 400 });
+    }
+
+    try {
+      await requireWallet(request, wallet);
+    } catch (e) {
+      const { error, status } = authErrorResponse(e);
+      return NextResponse.json({ error }, { status });
     }
 
     const walletLc = wallet.toLowerCase();

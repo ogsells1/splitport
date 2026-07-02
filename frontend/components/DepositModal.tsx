@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { authedFetch } from "@/lib/apiClient";
 import { parseUnits, type Address } from "viem";
 import { useWriteContract, usePublicClient } from "wagmi";
 import { useQueryClient } from "@tanstack/react-query";
@@ -54,7 +55,7 @@ export function DepositModal({ vaultAddress }: DepositModalProps) {
       await publicClient?.waitForTransactionReceipt({ hash: depositTx });
       queryClient.invalidateQueries();
 
-      fetch(`/api/transactions/sync?contractAddress=${vaultAddress}`, { method: "POST" }).catch(() => {});
+      authedFetch(`/api/transactions/sync?contractAddress=${vaultAddress}`, { method: "POST" }).catch(() => {});
 
       setStep("done");
       setTimeout(() => {

@@ -3,16 +3,18 @@
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireUser, authErrorResponse } from "@/lib/auth";
 
 export async function GET(request: Request) {
+  let ownerPrivyId: string;
   try {
-    const { searchParams } = new URL(request.url);
-    const ownerPrivyId = searchParams.get("ownerPrivyId");
+    ownerPrivyId = await requireUser(request);
+  } catch (e) {
+    const { error, status } = authErrorResponse(e);
+    return NextResponse.json({ error }, { status });
+  }
 
-    if (!ownerPrivyId) {
-      return NextResponse.json({ error: "ownerPrivyId is required" }, { status: 400 });
-    }
-
+  try {
     const user = await prisma.user.findUnique({ where: { privyId: ownerPrivyId } });
     if (!user) {
       return NextResponse.json({ projects: [] });

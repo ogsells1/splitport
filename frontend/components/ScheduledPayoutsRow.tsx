@@ -6,6 +6,7 @@
 // recurring schedule in AutoPayoutRow.
 
 import { useCallback, useEffect, useState } from "react";
+import { authedFetch } from "@/lib/apiClient";
 import { formatUnits } from "viem";
 
 type Status = "PENDING" | "DONE" | "CANCELED";
@@ -53,7 +54,7 @@ export function ScheduledPayoutsRow({ address, ownerPrivyId, splitMode = "PERCEN
   const load = useCallback(async () => {
     if (!ownerPrivyId) return;
     try {
-      const res = await fetch(
+      const res = await authedFetch(
         `/api/treasury/payments?contractAddress=${encodeURIComponent(
           address
         )}&ownerPrivyId=${encodeURIComponent(ownerPrivyId)}`
@@ -85,7 +86,7 @@ export function ScheduledPayoutsRow({ address, ownerPrivyId, splitMode = "PERCEN
     }
     setSaving(true);
     try {
-      const res = await fetch("/api/treasury/payments", {
+      const res = await authedFetch("/api/treasury/payments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -109,7 +110,7 @@ export function ScheduledPayoutsRow({ address, ownerPrivyId, splitMode = "PERCEN
   }
 
   async function cancel(id: string) {
-    await fetch(
+    await authedFetch(
       `/api/treasury/payments?id=${id}&ownerPrivyId=${encodeURIComponent(ownerPrivyId)}`,
       { method: "DELETE" }
     );

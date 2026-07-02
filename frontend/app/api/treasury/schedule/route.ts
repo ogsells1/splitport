@@ -11,6 +11,7 @@ import { NextResponse } from "next/server";
 import { parseUnits } from "viem";
 import { prisma } from "@/lib/prisma";
 import { defaultNextRun, type Frequency } from "@/lib/schedule";
+import { requireUser, authErrorResponse } from "@/lib/auth";
 
 const FREQUENCIES: Frequency[] = ["WEEKLY", "MONTHLY", "CUSTOM"];
 
@@ -51,13 +52,20 @@ function serialize(s: {
 }
 
 export async function GET(request: Request) {
+  let ownerPrivyId: string;
+  try {
+    ownerPrivyId = await requireUser(request);
+  } catch (e) {
+    const { error, status } = authErrorResponse(e);
+    return NextResponse.json({ error }, { status });
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const contractAddress = searchParams.get("contractAddress");
-    const ownerPrivyId = searchParams.get("ownerPrivyId");
-    if (!contractAddress || !ownerPrivyId) {
+    if (!contractAddress) {
       return NextResponse.json(
-        { error: "contractAddress and ownerPrivyId are required" },
+        { error: "contractAddress is required" },
         { status: 400 }
       );
     }
@@ -78,13 +86,21 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  let ownerPrivyId: string;
+  try {
+    ownerPrivyId = await requireUser(request);
+  } catch (e) {
+    const { error, status } = authErrorResponse(e);
+    return NextResponse.json({ error }, { status });
+  }
+
   try {
     const body = await request.json();
-    const { ownerPrivyId, contractAddress, frequency, amount, nextRunAt } = body;
+    const { contractAddress, frequency, amount, nextRunAt } = body;
 
-    if (!ownerPrivyId || !contractAddress || !FREQUENCIES.includes(frequency)) {
+    if (!contractAddress || !FREQUENCIES.includes(frequency)) {
       return NextResponse.json(
-        { error: "ownerPrivyId, contractAddress and a valid frequency are required" },
+        { error: "contractAddress and a valid frequency are required" },
         { status: 400 }
       );
     }
@@ -152,13 +168,20 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  let ownerPrivyId: string;
+  try {
+    ownerPrivyId = await requireUser(request);
+  } catch (e) {
+    const { error, status } = authErrorResponse(e);
+    return NextResponse.json({ error }, { status });
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const contractAddress = searchParams.get("contractAddress");
-    const ownerPrivyId = searchParams.get("ownerPrivyId");
-    if (!contractAddress || !ownerPrivyId) {
+    if (!contractAddress) {
       return NextResponse.json(
-        { error: "contractAddress and ownerPrivyId are required" },
+        { error: "contractAddress is required" },
         { status: 400 }
       );
     }
