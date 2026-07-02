@@ -1,9 +1,13 @@
 // frontend/app/api/treasury/route.ts
-// GET /api/treasury?userPrivyId=...  — custodial treasury balance + recent deposits
+// GET /api/treasury?userPrivyId=...
+// Custodial: DB-computed balance + deposit history.
+// Vault:     sum of on-chain vault USDC balances across all user's onchain projects.
 
 import { NextResponse } from "next/server";
+import { isAddress } from "viem";
 import { prisma } from "@/lib/prisma";
 import { getAvailableBalance } from "@/lib/treasuryBalance";
+import { getSettlement } from "@/lib/settlement";
 
 export async function GET(request: Request) {
   try {
@@ -16,7 +20,6 @@ export async function GET(request: Request) {
 
     const user = await prisma.user.findUnique({ where: { privyId: userPrivyId } });
     if (!user) {
-      // No user row yet — nothing deposited.
       return NextResponse.json({ balance: "0", deposits: [], distributions: [] });
     }
 
@@ -34,8 +37,24 @@ export async function GET(request: Request) {
       }),
     ]);
 
-    // Available balance also reserves active stream buffers (see treasuryBalance).
-    const balance = await getAvailableBalance(user.id);
+    let balance: bigint;
+    if (process.env.CUSTODY_MODE === "onchain") {
+      // Sum on-chain USDC balances of all vault projects owned by this user.
+      const settlement = getSettlement();
+      const projects = await prisma.project.findMany({
+        where: { ownerId: user.id },
+        select: { contractAddress: true },
+      });
+      const onchainProjects = projects.filter((p) => isAddress(p.contractAddress));
+      const balances = await Promise.all(
+        onchainProjects.map((p) =>
+          settlement.availableBalance(user.id, p.contractAddress).catch(() => 0n)
+        )
+      );
+      balance = balances.reduce((sum, b) => sum + b, 0n);
+    } else {
+      balance = await getAvailableBalance(user.id);
+    }
 
     return NextResponse.json({
       balance: balance.toString(),

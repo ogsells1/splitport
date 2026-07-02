@@ -7,8 +7,10 @@
 
 import { NextResponse } from "next/server";
 import { randomBytes } from "crypto";
-import { isAddress, parseUnits } from "viem";
+import { getAddress, isAddress, parseEventLogs, parseUnits, type Address } from "viem";
 import { prisma } from "@/lib/prisma";
+import { getExecutor } from "@/lib/executor";
+import { FACTORY_ABI } from "@/lib/contract";
 
 const DEFAULT_USDC_ADDRESS = "0x3600000000000000000000000000000000000000";
 const DEFAULT_CHAIN_ID = 5042002;
@@ -70,7 +72,43 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Duplicate wallet addresses are not allowed." }, { status: 400 });
     }
 
-    const contractAddress = `db_${randomBytes(16).toString("hex")}`;
+    // In onchain mode, deploy a SplitVault via the factory so custody lives on-chain.
+    // In custodial mode, use a synthetic db_ id — existing routing branches on isAddress().
+    let contractAddress: string;
+    if (process.env.CUSTODY_MODE === "onchain") {
+      const factoryAddress = process.env.VAULT_FACTORY_ADDRESS;
+      if (!factoryAddress || !isAddress(factoryAddress)) {
+        return NextResponse.json({ error: "VAULT_FACTORY_ADDRESS not configured" }, { status: 503 });
+      }
+      const executor = getExecutor();
+      if (!executor) {
+        return NextResponse.json({ error: "EXECUTOR_PRIVATE_KEY not configured" }, { status: 503 });
+      }
+      // Owner wallet: look up the user's linked wallet; fall back to executor for testnet.
+      const owner = await prisma.user.findUnique({ where: { privyId: ownerPrivyId } });
+      const ownerWallet = (owner as any)?.wallet ?? executor.account.address;
+
+      const deployTx = await executor.walletClient.writeContract({
+        address: getAddress(factoryAddress) as Address,
+        abi: FACTORY_ABI,
+        functionName: "createVault",
+        args: [getAddress(ownerWallet) as Address],
+      });
+      const receipt = await executor.publicClient.waitForTransactionReceipt({ hash: deployTx });
+
+      // Parse VaultCreated event to extract the new vault address.
+      const [vaultEvent] = parseEventLogs({
+        abi: FACTORY_ABI,
+        logs: receipt.logs,
+        eventName: "VaultCreated",
+      });
+      if (!vaultEvent) {
+        return NextResponse.json({ error: "Could not parse VaultCreated event from factory tx" }, { status: 500 });
+      }
+      contractAddress = getAddress(String((vaultEvent as any).args.vault));
+    } else {
+      contractAddress = `db_${randomBytes(16).toString("hex")}`;
+    }
 
     const project = await prisma.project.create({
       data: {

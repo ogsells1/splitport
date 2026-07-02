@@ -77,6 +77,14 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    // Streaming is custodial-only; vault (onchain) mode defers to a later phase.
+    if (process.env.CUSTODY_MODE === "onchain") {
+      return NextResponse.json(
+        { error: "Streaming payouts are not yet supported in vault (non-custodial) mode. Use one-off or scheduled payouts instead." },
+        { status: 501 }
+      );
+    }
+
     const body = await request.json();
     const { ownerPrivyId, contractAddress, total, startAt, endAt, contributorIds } = body;
 
