@@ -53,6 +53,9 @@ contract SplitVault is ReentrancyGuard, Ownable, Pausable {
     // wallet → contributor index+1 (0 = not found)
     mapping(address => uint256) private contributorIndex;
 
+    // pull-claim: accrued-but-not-yet-withdrawn balance per wallet
+    mapping(address => uint256) public claimable;
+
     // ─────────────────────────────────────────────
     // EVENTS
     // ─────────────────────────────────────────────
@@ -65,6 +68,9 @@ contract SplitVault is ReentrancyGuard, Ownable, Pausable {
     event RevenueDistributed(uint256 totalAmount, uint256 contributorCount, uint256 timestamp);
     event PaymentSent(address indexed wallet, uint256 amount, string role);
     event EmergencyWithdraw(address indexed to, uint256 amount);
+    event PayEach(address indexed recipient, uint256 amount);
+    event Accrued(address indexed recipient, uint256 amount);
+    event Claimed(address indexed wallet, uint256 amount);
 
     // ─────────────────────────────────────────────
     // ERRORS
@@ -82,6 +88,8 @@ contract SplitVault is ReentrancyGuard, Ownable, Pausable {
     error InsufficientBalance();
     error ZeroAmount();
     error TransferFailed();
+    error LengthMismatch();
+    error NothingToClaim();
 
     // ─────────────────────────────────────────────
     // MODIFIERS
@@ -293,6 +301,86 @@ contract SplitVault is ReentrancyGuard, Ownable, Pausable {
         totalDistributed += distributed;
 
         emit RevenueDistributed(distributed, len, block.timestamp);
+    }
+
+    // ─────────────────────────────────────────────
+    // FIXED-AMOUNT & PULL-CLAIM
+    // ─────────────────────────────────────────────
+
+    /**
+     * @notice Push exact USDC amounts to each recipient in one call.
+     *         Used by the backend keeper for fixed-amount and %-computed distributions.
+     *         Recipients need not be registered contributors — useful when a share is
+     *         computed off-chain (computeShares) and paid in one shot.
+     */
+    function payEach(
+        address[] calldata _recipients,
+        uint256[] calldata _amounts
+    ) external onlyOwner onlyInitialized whenNotPaused nonReentrant {
+        if (_recipients.length == 0 || _recipients.length != _amounts.length) revert LengthMismatch();
+
+        uint256 total;
+        for (uint256 i = 0; i < _amounts.length; i++) total += _amounts[i];
+        if (usdcToken.balanceOf(address(this)) < total) revert InsufficientBalance();
+
+        for (uint256 i = 0; i < _recipients.length; i++) {
+            if (_recipients[i] == address(0)) revert InvalidAddress();
+            if (_amounts[i] == 0) continue;
+            usdcToken.safeTransfer(_recipients[i], _amounts[i]);
+            totalDistributed += _amounts[i];
+            emit PayEach(_recipients[i], _amounts[i]);
+        }
+    }
+
+    /**
+     * @notice Accumulate claimable balances without pushing (pull-claim model).
+     *         The keeper/owner calls this; each recipient later calls claim().
+     *         Funds remain in the vault until claimed.
+     */
+    function accrue(
+        address[] calldata _recipients,
+        uint256[] calldata _amounts
+    ) external onlyOwner onlyInitialized whenNotPaused nonReentrant {
+        if (_recipients.length == 0 || _recipients.length != _amounts.length) revert LengthMismatch();
+
+        uint256 total;
+        for (uint256 i = 0; i < _amounts.length; i++) total += _amounts[i];
+        if (usdcToken.balanceOf(address(this)) < total) revert InsufficientBalance();
+
+        for (uint256 i = 0; i < _recipients.length; i++) {
+            if (_recipients[i] == address(0)) revert InvalidAddress();
+            if (_amounts[i] == 0) continue;
+            claimable[_recipients[i]] += _amounts[i];
+            emit Accrued(_recipients[i], _amounts[i]);
+        }
+    }
+
+    /**
+     * @notice A contributor pulls their entire claimable balance.
+     *         Gas is paid by the caller (or a paymaster via ERC-4337).
+     */
+    function claim() external onlyInitialized whenNotPaused nonReentrant {
+        uint256 amount = claimable[msg.sender];
+        if (amount == 0) revert NothingToClaim();
+        claimable[msg.sender] = 0;
+        totalDistributed += amount;
+        usdcToken.safeTransfer(msg.sender, amount);
+        emit Claimed(msg.sender, amount);
+    }
+
+    /**
+     * @notice Anyone can trigger a claim on behalf of a wallet — funds always go to
+     *         that wallet. Non-custodial: the destination cannot be changed.
+     *         Lets the platform keeper settle claims without the participant signing.
+     */
+    function claimFor(address _wallet) external onlyInitialized whenNotPaused nonReentrant {
+        if (_wallet == address(0)) revert InvalidAddress();
+        uint256 amount = claimable[_wallet];
+        if (amount == 0) revert NothingToClaim();
+        claimable[_wallet] = 0;
+        totalDistributed += amount;
+        usdcToken.safeTransfer(_wallet, amount);
+        emit Claimed(_wallet, amount);
     }
 
     // ─────────────────────────────────────────────

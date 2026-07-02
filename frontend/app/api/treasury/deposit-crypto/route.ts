@@ -1,20 +1,16 @@
 // frontend/app/api/treasury/deposit-crypto/route.ts
-// POST /api/treasury/deposit-crypto — credit a treasury top-up after the user
-// sends USDC to the platform treasury wallet. The frontend submits the txHash;
-// we verify on-chain that a USDC Transfer to the treasury address actually
-// happened, then record a CONFIRMED deposit (idempotent on txHash).
+// POST /api/treasury/deposit-crypto — credit a deposit after USDC is sent on-chain.
+//
+// Custodial mode: user sends to the platform treasury wallet; we verify and credit DB.
+// Vault mode:     user sends to the project's SplitVault; we verify and credit DB.
+//   Pass `contractAddress` (vault) in the request body; `userPrivyId` still required
+//   for attribution. On-chain balance is the source of truth; DB entry is the audit trail.
 
 import { NextResponse } from "next/server";
-import { createPublicClient, http, parseAbiItem, getAddress, type Hash } from "viem";
+import { createPublicClient, http, parseAbiItem, getAddress, isAddress, type Hash } from "viem";
 import { prisma } from "@/lib/prisma";
 import { USDC_ADDRESS } from "@/lib/contract";
-
-const arcTestnet = {
-  id: 5042002,
-  name: "Arc Testnet",
-  nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 6 },
-  rpcUrls: { default: { http: ["https://rpc.testnet.arc.network"] } },
-} as const;
+import { arcTestnet } from "@/lib/executor";
 
 const client = createPublicClient({ chain: arcTestnet, transport: http() });
 
@@ -24,19 +20,32 @@ const TRANSFER_EVENT = parseAbiItem(
 
 export async function POST(request: Request) {
   try {
-    const treasuryAddress = process.env.NEXT_PUBLIC_TREASURY_ADDRESS;
-    if (!treasuryAddress) {
-      return NextResponse.json(
-        { error: "Crypto top-up is not configured (missing NEXT_PUBLIC_TREASURY_ADDRESS)." },
-        { status: 503 }
-      );
-    }
-
     const body = await request.json();
-    const { userPrivyId, txHash } = body;
+    const { userPrivyId, txHash, contractAddress } = body;
 
     if (!userPrivyId || !txHash || typeof txHash !== "string") {
       return NextResponse.json({ error: "userPrivyId and txHash are required" }, { status: 400 });
+    }
+
+    // Determine destination address to verify the transfer against.
+    let destination: string;
+    if (process.env.CUSTODY_MODE === "onchain") {
+      if (!contractAddress || !isAddress(contractAddress)) {
+        return NextResponse.json(
+          { error: "contractAddress (vault) is required in onchain mode" },
+          { status: 400 }
+        );
+      }
+      destination = contractAddress;
+    } else {
+      const treasuryAddress = process.env.NEXT_PUBLIC_TREASURY_ADDRESS;
+      if (!treasuryAddress) {
+        return NextResponse.json(
+          { error: "Crypto top-up is not configured (missing NEXT_PUBLIC_TREASURY_ADDRESS)." },
+          { status: 503 }
+        );
+      }
+      destination = treasuryAddress;
     }
 
     // Idempotency: if we already recorded this tx, just return it.
@@ -58,19 +67,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Transaction not found or failed" }, { status: 400 });
     }
 
-    const treasury = getAddress(treasuryAddress);
+    const dest = getAddress(destination);
     const usdc = getAddress(USDC_ADDRESS);
 
-    // Sum all USDC Transfer events to the treasury wallet, scoped to this tx's block.
+    // Sum all USDC Transfer events to the destination in this tx's block.
     let total = 0n;
     const logs = await client.getLogs({
       address: usdc,
       event: TRANSFER_EVENT,
-      args: { to: treasury },
+      args: { to: dest },
       fromBlock: receipt.blockNumber,
       toBlock: receipt.blockNumber,
     });
-
     for (const log of logs) {
       if (log.transactionHash?.toLowerCase() === txHash.toLowerCase()) {
         total += log.args.value ?? 0n;
@@ -79,7 +87,7 @@ export async function POST(request: Request) {
 
     if (total <= 0n) {
       return NextResponse.json(
-        { error: "No USDC transfer to the treasury wallet found in this transaction." },
+        { error: "No USDC transfer to the destination address found in this transaction." },
         { status: 400 }
       );
     }

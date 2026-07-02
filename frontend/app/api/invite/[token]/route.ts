@@ -4,8 +4,10 @@
 // DELETE /api/invite/[token] — owner revokes a not-yet-claimed invite
 
 import { NextResponse } from "next/server";
-import { isAddress } from "viem";
+import { getAddress, isAddress, type Address } from "viem";
 import { prisma } from "@/lib/prisma";
+import { getExecutor } from "@/lib/executor";
+import { VAULT_ABI } from "@/lib/contract";
 
 export async function GET(
   _request: Request,
@@ -85,6 +87,10 @@ export async function POST(
 
     // Reserved payouts and stream shares created before this invite was claimed
     // now become claimable: attach the linked wallet so they show up in the cabinet.
+    const deferredPayouts = await prisma.payout.findMany({
+      where: { contributorId: contributor.id, wallet: null, status: "PENDING" },
+      include: { project: { select: { contractAddress: true } } },
+    });
     await prisma.payout.updateMany({
       where: { contributorId: contributor.id, wallet: null, status: "PENDING" },
       data: { wallet: wallet.toLowerCase() },
@@ -93,6 +99,37 @@ export async function POST(
       where: { contributorId: contributor.id, wallet: null },
       data: { wallet: wallet.toLowerCase() },
     });
+
+    // Vault mode: deferred settlement — call accrue() on each vault for the
+    // reserved-but-not-yet-accrued amounts. The vault holds the funds; we now
+    // tell it who can claim them.
+    if (process.env.CUSTODY_MODE === "onchain" && deferredPayouts.length > 0) {
+      const executor = getExecutor();
+      if (executor) {
+        // Group by vault (one project may have multiple deferred payouts).
+        const byVault = new Map<string, bigint>();
+        for (const p of deferredPayouts) {
+          const addr = p.project.contractAddress;
+          if (!isAddress(addr)) continue;
+          byVault.set(addr, (byVault.get(addr) ?? 0n) + p.amount);
+        }
+        for (const [contractAddress, total] of byVault) {
+          try {
+            const txHash = await executor.walletClient.writeContract({
+              address: getAddress(contractAddress) as Address,
+              abi: VAULT_ABI,
+              functionName: "accrue",
+              args: [[getAddress(wallet) as Address], [total]],
+            });
+            await executor.publicClient.waitForTransactionReceipt({ hash: txHash });
+          } catch (e) {
+            // Log but don't fail the invite claim — the DB payout is already
+            // attached to the wallet and can be retried manually or via keeper.
+            console.error("[invite claim] deferred accrue failed", contractAddress, e);
+          }
+        }
+      }
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -9,7 +9,7 @@
 
 import { formatUnits } from "viem";
 import { prisma } from "@/lib/prisma";
-import { getAvailableBalance } from "@/lib/treasuryBalance";
+import { getSettlement } from "@/lib/settlement";
 
 export class DistributionError extends Error {
   status: number;
@@ -127,29 +127,22 @@ export async function runDistribution(opts: {
     contributorIds,
   });
 
-  // Treasury balance: confirmed deposits − lump-sum distributions − stream buffers.
-  const available = await getAvailableBalance(project.owner.id);
+  const settlement = getSettlement();
+
+  // Treasury balance: custodial = DB sum; vault = on-chain vault balance.
+  const available = await settlement.availableBalance(project.owner.id, project.contractAddress);
   if (total > available) {
     throw new DistributionError(
       `Insufficient treasury balance. Available: ${formatUnits(available, 6)} USDC.`
     );
   }
 
-  const result = await prisma.$transaction(async (tx) => {
-    const distribution = await tx.distribution.create({
-      data: { projectId: project.id, total },
-    });
-    await tx.payout.createMany({
-      data: shares.map((s) => ({
-        distributionId: distribution.id,
-        projectId: project.id,
-        contributorId: s.contributorId,
-        wallet: s.wallet,
-        amount: s.amount,
-      })),
-    });
-    return distribution;
-  });
+  const { distributionId } = await settlement.settleDistribution(
+    project.id,
+    shares,
+    total,
+    project.contractAddress
+  );
 
-  return { distributionId: result.id, distributed: total, payouts: shares.length };
+  return { distributionId, distributed: total, payouts: shares.length };
 }
