@@ -1,8 +1,8 @@
 // frontend/app/api/treasury/streams/route.ts
 // Owner-facing CRUD for Superfluid-style payout streams.
-//   GET    ?contractAddress=&ownerPrivyId=  – list streams with accrued/claimed totals
-//   POST   { ownerPrivyId, contractAddress, total, startAt, endAt }  – open a stream
-//   DELETE ?id=&ownerPrivyId=               – cancel an active stream
+//   GET    ?contractAddress=&ownerPrivyId=  - list streams with accrued/claimed totals
+//   POST   { ownerPrivyId, contractAddress, total, startAt, endAt }  - open a stream
+//   DELETE ?id=&ownerPrivyId=               - cancel an active stream
 // The full total is reserved from the treasury upfront. Accrual is computed on
 // read (see lib/stream); contributors claim accrued funds from their cabinet.
 

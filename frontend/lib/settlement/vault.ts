@@ -1,4 +1,4 @@
-// VaultSettlement – on-chain settlement via per-project SplitVault contracts.
+// VaultSettlement - on-chain settlement via per-project SplitVault contracts.
 // Selected when CUSTODY_MODE=onchain.
 
 import { getAddress, isAddress, type Address } from "viem";
@@ -51,7 +51,7 @@ export class VaultSettlement implements SettlementProvider {
     const recipients = walleted.map((s) => getAddress(s.wallet!) as Address);
     const amounts    = walleted.map((s) => s.amount);
 
-    // accrue into the vault's claimable mapping (pull model – participants call claimFor)
+    // accrue into the vault's claimable mapping (pull model - participants call claimFor)
     const txHash = await executor.walletClient.writeContract({
       address: vault,
       abi: VAULT_ABI,
@@ -60,7 +60,7 @@ export class VaultSettlement implements SettlementProvider {
     });
     await executor.publicClient.waitForTransactionReceipt({ hash: txHash });
 
-    // Record in DB – payouts are PENDING until claimed
+    // Record in DB - payouts are PENDING until claimed
     const distributionId = await prisma.$transaction(async (tx) => {
       const distribution = await tx.distribution.create({
         data: { projectId, total },
@@ -82,7 +82,7 @@ export class VaultSettlement implements SettlementProvider {
   }
 
   /**
-   * Executor triggers claimFor(wallet) on the vault – funds go directly to the
+   * Executor triggers claimFor(wallet) on the vault - funds go directly to the
    * participant's wallet. Non-custodial: executor can't change the destination.
    */
   async settleClaim(wallet: string, contractAddress?: string): Promise<{
@@ -117,7 +117,7 @@ export class VaultSettlement implements SettlementProvider {
     });
     await executor.publicClient.waitForTransactionReceipt({ hash: txHash });
 
-    // No fee deducted – gas on Arc is USDC paid by the executor, not by the participant.
+    // No fee deducted - gas on Arc is USDC paid by the executor, not by the participant.
     return { txHash, gross, fee: 0n, net: gross };
   }
 

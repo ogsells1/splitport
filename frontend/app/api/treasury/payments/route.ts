@@ -1,10 +1,10 @@
 // frontend/app/api/treasury/payments/route.ts
 // Owner-facing CRUD for a project's queue of one-off scheduled payouts. Unlike the
-// single recurring PayoutSchedule, a project can have any number of these – each a
+// single recurring PayoutSchedule, a project can have any number of these - each a
 // fixed amount distributed once on a future date by the daily cron.
-//   GET    ?contractAddress=&ownerPrivyId=  – list (newest first)
-//   POST   { ownerPrivyId, contractAddress, amount, runAt }  – queue one
-//   DELETE ?id=&ownerPrivyId=               – cancel a PENDING one
+//   GET    ?contractAddress=&ownerPrivyId=  - list (newest first)
+//   POST   { ownerPrivyId, contractAddress, amount, runAt }  - queue one
+//   DELETE ?id=&ownerPrivyId=               - cancel a PENDING one
 
 import { NextResponse } from "next/server";
 import { parseUnits } from "viem";

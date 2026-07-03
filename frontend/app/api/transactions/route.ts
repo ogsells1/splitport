@@ -1,7 +1,7 @@
 // frontend/app/api/transactions/route.ts
-// GET /api/transactions – список транзакций
-//   ?contractAddress=0x...   – только для этого проекта
-//   ?ownerPrivyId=...        – по всем проектам пользователя (унифицированная история)
+// GET /api/transactions - список транзакций
+//   ?contractAddress=0x...   - только для этого проекта
+//   ?ownerPrivyId=...        - по всем проектам пользователя (унифицированная история)
 // Один из двух параметров обязателен.
 
 import { NextResponse } from "next/server";

@@ -4,8 +4,8 @@
 // claimable Payout per contributor. No on-chain tx.
 //
 // Two split modes:
-//   PERCENTAGE – split an input amount across all contributors by basis points.
-//   FIXED      – pay each (selected) contributor their own fixed amount.
+//   PERCENTAGE - split an input amount across all contributors by basis points.
+//   FIXED      - pay each (selected) contributor their own fixed amount.
 
 import { formatUnits } from "viem";
 import { prisma } from "@/lib/prisma";

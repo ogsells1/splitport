@@ -1,7 +1,7 @@
 // frontend/lib/stream.ts
 // Accrual math for Superfluid-style payout streams. A share's value grows linearly
 // from 0 at startAt to its full `amount` at endAt; claimable = accrued − claimed.
-// Computed on read – no cron drips the balance.
+// Computed on read - no cron drips the balance.
 
 export type StreamStatusLite = "ACTIVE" | "CANCELED";
 

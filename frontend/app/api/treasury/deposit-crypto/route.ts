@@ -1,5 +1,5 @@
 // frontend/app/api/treasury/deposit-crypto/route.ts
-// POST /api/treasury/deposit-crypto – credit a deposit after USDC is sent on-chain.
+// POST /api/treasury/deposit-crypto - credit a deposit after USDC is sent on-chain.
 //
 // Custodial mode: user sends to the platform treasury wallet; we verify and credit DB.
 // Vault mode:     user sends to the project's SplitVault; we verify and credit DB.
@@ -68,7 +68,7 @@ export async function POST(request: Request) {
       receipt = await client.getTransactionReceipt({ hash: txHash as Hash });
     } catch {
       return NextResponse.json(
-        { error: "Transaction not found yet – wait for it to be mined and try again." },
+        { error: "Transaction not found yet - wait for it to be mined and try again." },
         { status: 400 }
       );
     }

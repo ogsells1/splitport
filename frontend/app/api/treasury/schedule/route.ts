@@ -1,9 +1,9 @@
 // frontend/app/api/treasury/schedule/route.ts
 // Owner-facing CRUD for a project's automatic-payout schedule.
-//   GET    ?contractAddress=&ownerPrivyId=  – current schedule (or null)
+//   GET    ?contractAddress=&ownerPrivyId=  - current schedule (or null)
 //   POST   { ownerPrivyId, contractAddress, frequency, amount, nextRunAt? }
-//          – upsert the schedule (one per project)
-//   DELETE ?contractAddress=&ownerPrivyId=  – turn auto-payouts off
+//          - upsert the schedule (one per project)
+//   DELETE ?contractAddress=&ownerPrivyId=  - turn auto-payouts off
 // Custodial, no on-chain tx. The daily cron at /api/treasury/schedule/run
 // executes due schedules.
 
