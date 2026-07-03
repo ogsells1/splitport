@@ -1,6 +1,7 @@
 "use client";
 
 import Logo from "@/components/Logo";
+import AppNav from "@/components/AppNav";
 import { useEffect, useState } from "react";
 import { authedFetch } from "@/lib/apiClient";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
@@ -160,9 +161,7 @@ export default function CabinetPage() {
       <header className="bg-white border-b border-stone-200 px-4 py-3">
         <div className="max-w-xl mx-auto flex items-center justify-between">
           <a href="/dashboard" className="flex items-center gap-2 font-semibold text-stone-900 hover:text-emerald-700 transition-colors"><Logo className="h-6 w-6" />SplitPort</a>
-          <button onClick={logout} className="text-sm text-stone-400 hover:text-stone-600 transition-colors">
-            Sign out
-          </button>
+          <AppNav />
         </div>
       </header>
 

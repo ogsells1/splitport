@@ -1,6 +1,7 @@
 "use client";
 
 import Logo from "@/components/Logo";
+import AppNav from "@/components/AppNav";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { authedFetch } from "@/lib/apiClient";
 import { useRouter } from "next/navigation";
@@ -61,14 +62,7 @@ export default function DashboardHub() {
       <header className="bg-white border-b border-stone-200 px-4 py-3">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <a href="/dashboard" className="flex items-center gap-2 font-semibold text-stone-900 hover:text-emerald-700 transition-colors"><Logo className="h-6 w-6" />SplitPort</a>
-          <div className="flex items-center gap-3">
-            <a href="/treasury" className="text-sm text-stone-400 hover:text-stone-600 transition-colors">
-              Treasury
-            </a>
-            <button onClick={logout} className="text-sm text-stone-400 hover:text-stone-600 transition-colors">
-              Sign out
-            </button>
-          </div>
+          <AppNav />
         </div>
       </header>
 
