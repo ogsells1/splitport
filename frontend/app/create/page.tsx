@@ -201,7 +201,7 @@ export default function CreateProjectPage() {
           <label className="block text-sm text-stone-500 mb-1.5">Project name</label>
           <input
             type="text"
-            placeholder="My Music Project"
+            placeholder="Nomad Design Studio"
             value={name}
             onChange={(e) => setName(e.target.value)}
             className="w-full px-3 py-2.5 text-sm border border-stone-200 rounded-xl outline-none focus:border-emerald-500 transition-colors"

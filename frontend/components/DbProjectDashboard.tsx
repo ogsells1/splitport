@@ -489,7 +489,7 @@ export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboard
             </div>
             {distributedTotal > 0n && (
               <p className="text-xs text-stone-400 mb-1">
-                distributed to this project:{" "}
+                total paid out:{" "}
                 <span className="text-stone-600 font-medium">
                   {fmtUsdc(distributedTotal)} USDC
                 </span>
