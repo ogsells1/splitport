@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { useEffect } from "react";
 import { type Address, isAddress } from "viem";
 import { VaultInfo } from "@/components/VaultInfo";
+import AppNav from "@/components/AppNav";
 import { DepositModal } from "@/components/DepositModal";
 import { DistributeButton } from "@/components/DistributeButton";
 import { ContributorsEditor } from "@/components/ContributorsEditor";
@@ -58,22 +59,15 @@ export default function Dashboard() {
       <header className="bg-white border-b border-stone-200 px-4 py-3">
         <div className="max-w-2xl mx-auto flex items-center justify-between gap-3">
           <ProjectSwitcher ownerPrivyId={user?.id ?? ""} currentAddress={vaultAddress} />
-          <div className="flex items-center gap-3">
-            <a href="/treasury" className="text-sm text-stone-400 hover:text-stone-600 transition-colors">
-              Treasury
-            </a>
-            {shortAddress && (
-              <span className="text-sm text-stone-500 font-mono bg-stone-100 px-2 py-1 rounded-lg">
-                {shortAddress}
-              </span>
-            )}
-            <button
-              onClick={logout}
-              className="text-sm text-stone-400 hover:text-stone-600 transition-colors"
-            >
-              Sign out
-            </button>
-          </div>
+          <AppNav
+            extra={
+              shortAddress ? (
+                <span className="text-sm text-stone-500 font-mono bg-stone-100 px-2 py-1 rounded-lg">
+                  {shortAddress}
+                </span>
+              ) : null
+            }
+          />
         </div>
       </header>
 
