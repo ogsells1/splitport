@@ -3,7 +3,7 @@ import { syncProjectToDb } from "./lib/syncDb";
 
 const VAULT_ADDRESS = "0x2DB3dbDA6C5F5CfF3234CDBadD049D90412c1774";
 const USDC_ADDRESS  = "0x3600000000000000000000000000000000000000";
-const PROJECT_NAME  = "BYN Split Pay — Demo Project";
+const PROJECT_NAME  = "SplitPort — Demo Project";
 
 const VAULT_ABI = [
   "function replaceContributors(address[],uint256[],string[]) external",
@@ -32,7 +32,7 @@ const NEW_CONTRIBUTORS = [
 ];
 
 async function main() {
-  console.log("\n🔄  BYN SplitVault — Replace Contributors\n");
+  console.log("\n🔄  SplitPort SplitVault — Replace Contributors\n");
 
   // Валидация
   const total = NEW_CONTRIBUTORS.reduce((acc, c) => acc + c.bps, 0);

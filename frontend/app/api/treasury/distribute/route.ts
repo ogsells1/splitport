@@ -1,5 +1,5 @@
 // frontend/app/api/treasury/distribute/route.ts
-// POST /api/treasury/distribute — owner splits an amount from the treasury across
+// POST /api/treasury/distribute – owner splits an amount from the treasury across
 // a project's contributors by basis points, creating claimable Payouts. Fully
 // custodial: no on-chain tx, the owner never signs anything. Contributors later
 // claim their share from their cabinet. Shares the core logic with the scheduled

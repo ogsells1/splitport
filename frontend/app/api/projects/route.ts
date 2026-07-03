@@ -1,5 +1,5 @@
 // frontend/app/api/projects/route.ts
-// GET /api/projects?ownerPrivyId=... — список проектов пользователя
+// GET /api/projects?ownerPrivyId=... – список проектов пользователя
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";

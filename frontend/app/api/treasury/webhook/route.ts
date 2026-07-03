@@ -1,5 +1,5 @@
 // frontend/app/api/treasury/webhook/route.ts
-// POST /api/treasury/webhook — Stripe webhook. On checkout.session.completed,
+// POST /api/treasury/webhook – Stripe webhook. On checkout.session.completed,
 // mark the matching treasury deposit CONFIRMED (idempotent on stripeSessionId).
 //
 // Stripe requires the raw request body for signature verification, so we read

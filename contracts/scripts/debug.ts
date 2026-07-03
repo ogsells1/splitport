@@ -31,7 +31,7 @@ async function main() {
   // Минимальный тест — один участник 100%
   try {
     const tx = await vault.initialize(
-      "BYN Test",
+      "SplitPort Test",
       USDC_ADDRESS,
       [signer.address],
       [10000n],
@@ -46,7 +46,7 @@ async function main() {
     // Попробуем статический вызов для получения причины
     try {
       await vault.initialize.staticCall(
-        "BYN Test",
+        "SplitPort Test",
         USDC_ADDRESS,
         [signer.address],
         [10000n],

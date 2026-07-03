@@ -222,7 +222,7 @@ export function AutoPayoutRow({ address, ownerPrivyId, splitMode = "PERCENTAGE",
 
           {isFixed ? (
             <div className="text-xs text-stone-500 bg-stone-50 rounded-lg px-3 py-2">
-              Each run pays every participant their fixed amount —{" "}
+              Each run pays every participant their fixed amount –{" "}
               <span className="font-medium text-stone-700">
                 {parseFloat(formatUnits(BigInt(fixedTotal), 6)).toFixed(2)} USDC
               </span>{" "}

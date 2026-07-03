@@ -171,7 +171,7 @@ export function StreamRow({ address, ownerPrivyId, splitMode = "PERCENTAGE", fix
 
       {streams.length === 0 ? (
         <p className="text-sm text-stone-500">
-          Drip a total amount to contributors continuously until a target date — they can pull
+          Drip a total amount to contributors continuously until a target date – they can pull
           what&apos;s accrued anytime.
         </p>
       ) : (
@@ -247,7 +247,7 @@ export function StreamRow({ address, ownerPrivyId, splitMode = "PERCENTAGE", fix
               <div className="text-xs text-stone-500 bg-stone-50 rounded-lg px-3 py-2.5">
                 Streams{" "}
                 <span className="font-medium text-stone-700">{usdc(streamSum)} USDC</span> over the
-                window — {selected.size > 0 ? `${selected.size} selected` : "all participants"} by
+                window – {selected.size > 0 ? `${selected.size} selected` : "all participants"} by
                 their fixed amount.
               </div>
             </div>

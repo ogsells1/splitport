@@ -88,7 +88,7 @@ export default function InvitePage({ params }: { params: { token: string } }) {
           <p className="text-stone-900 font-medium">You&apos;re in!</p>
           <p className="text-stone-500 text-sm">
             Your wallet is linked. When the project owner sends out payments, your share will show
-            up in your cabinet — sign in any time to claim it to your wallet.
+            up in your cabinet – sign in any time to claim it to your wallet.
           </p>
           <a
             href="/cabinet"
@@ -148,7 +148,7 @@ export default function InvitePage({ params }: { params: { token: string } }) {
         )}
 
         <p className="text-xs text-stone-400">
-          The project owner will only see your wallet address — not your identity.
+          The project owner will only see your wallet address – not your identity.
         </p>
       </div>
     </Centered>

@@ -1,10 +1,10 @@
 // frontend/lib/onramp/walletDelivery.ts
-// Mainnet provider (STUB — no concrete on-ramp wired yet).
+// Mainnet provider (STUB – no concrete on-ramp wired yet).
 //
 // Model: the user pays by card inside a fiat→crypto on-ramp widget (Stripe Crypto
 // Onramp / Coinbase Onramp / Transak / MoonPay, etc.). The on-ramp handles KYC and
 // conversion and DELIVERS real USDC on-chain to our treasury wallet. We then
-// confirm the on-chain Transfer and credit the DB — reusing the verification that
+// confirm the on-chain Transfer and credit the DB – reusing the verification that
 // /api/treasury/deposit-crypto already does (find a USDC Transfer to the treasury
 // by txHash, match amount, mark CONFIRMED). Because the credit is backed by real
 // USDC, claims pay out for real.
@@ -59,7 +59,7 @@ export function createWalletDeliveryOnramp(
       //   destinationWallet = cfg.treasuryAddress, asset = USDC, chain = cfg.chainId
       // and return its checkoutUrl/sessionId.
       throw new OnrampNotConfiguredError(
-        "wallet-delivery onramp: createTopUp not implemented — no provider wired yet."
+        "wallet-delivery onramp: createTopUp not implemented – no provider wired yet."
       );
       // Shape once implemented:
       // return { provider: "<provider>", checkoutUrl, sessionId,
@@ -69,10 +69,10 @@ export function createWalletDeliveryOnramp(
     async confirm(_payload: unknown): Promise<SettlementResult> {
       requireConfig();
       // TODO(provider): verify the delivered (and CCTP-bridged, if needed) USDC
-      // Transfer to the treasury on-chain — reuse the logic in
-      // app/api/treasury/deposit-crypto/route.ts — then return { amountUsdc, txHash }.
+      // Transfer to the treasury on-chain – reuse the logic in
+      // app/api/treasury/deposit-crypto/route.ts – then return { amountUsdc, txHash }.
       throw new OnrampNotConfiguredError(
-        "wallet-delivery onramp: confirm not implemented — no provider wired yet."
+        "wallet-delivery onramp: confirm not implemented – no provider wired yet."
       );
     },
   };
