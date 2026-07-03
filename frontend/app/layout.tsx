@@ -6,7 +6,7 @@ import { Providers } from "./providers";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Splitport — pay your team anywhere on Earth",
+  title: "SplitPort — pay your team anywhere on Earth",
   description:
     "Fund a treasury, set each person's share, and pay everyone in one click — by percentage, fixed salary, schedule, or stream. USDC payouts, no crypto skills required.",
 };

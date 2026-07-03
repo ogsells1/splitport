@@ -3,6 +3,7 @@
 import { usePrivy } from "@privy-io/react-auth";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import Logo from "@/components/Logo";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "";
 
@@ -160,11 +161,9 @@ export default function Home() {
       {/* Nav */}
       <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
         <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-700 text-xs font-bold text-white">
-            S
-          </div>
+          <Logo className="h-7 w-7" />
           <span className="text-[15px] font-semibold tracking-tight">
-            Splitport
+            SplitPort
           </span>
         </div>
         <nav className="hidden items-center gap-8 text-sm text-stone-500 sm:flex">
@@ -288,7 +287,7 @@ export default function Home() {
             onClick={openApp}
             className="mt-8 rounded-xl bg-emerald-500 px-8 py-3 text-sm font-semibold text-stone-950 transition-colors hover:bg-emerald-400"
           >
-            Open Splitport
+            Open SplitPort
           </button>
         </div>
       </section>
@@ -296,7 +295,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="border-t border-stone-200">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-6 py-8 text-sm text-stone-400 sm:flex-row">
-          <span>© {new Date().getFullYear()} Splitport</span>
+          <span>© {new Date().getFullYear()} SplitPort</span>
           <span>Built on USDC · Powered by Stripe, Circle & Privy</span>
         </div>
       </footer>
