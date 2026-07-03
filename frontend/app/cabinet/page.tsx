@@ -52,32 +52,37 @@ export default function CabinetPage() {
   const [banner, setBanner] = useState("");
   const [walletMsg, setWalletMsg] = useState("");
 
-  const walletAddress = wallets[0]?.address as Address | undefined;
+  const activeWallet = wallets[0];
+  const walletAddress = activeWallet?.address as Address | undefined;
+  // The built-in Privy wallet has no UI for wallet_* methods (it proxies unknown
+  // requests to the RPC node, which rejects them). These actions only make sense
+  // for external injected wallets like MetaMask or Trust.
+  const isEmbeddedWallet = activeWallet?.walletClientType === "privy";
 
   async function addArcNetwork() {
     setWalletMsg("");
     try {
-      const provider: any = await wallets[0]?.getEthereumProvider();
+      const provider: any = await activeWallet?.getEthereumProvider();
       if (!provider) throw new Error("No wallet provider");
       await provider.request({ method: "wallet_addEthereumChain", params: [ARC_CHAIN_PARAMS] });
       setWalletMsg("Arc Testnet added to your wallet ✓");
-    } catch (e: any) {
-      setWalletMsg(e?.message ?? "Your wallet didn't add the network - you can add it manually.");
+    } catch {
+      setWalletMsg("Your wallet couldn't add the network automatically - add Arc Testnet manually (RPC https://rpc.testnet.arc.network).");
     }
   }
 
   async function addUsdcToken() {
     setWalletMsg("");
     try {
-      const provider: any = await wallets[0]?.getEthereumProvider();
+      const provider: any = await activeWallet?.getEthereumProvider();
       if (!provider) throw new Error("No wallet provider");
       await provider.request({
         method: "wallet_watchAsset",
         params: { type: "ERC20", options: { address: USDC_ADDRESS, symbol: "USDC", decimals: 6 } },
       });
       setWalletMsg("USDC added to your wallet ✓");
-    } catch (e: any) {
-      setWalletMsg(e?.message ?? "Your wallet didn't add the token - you can add it manually.");
+    } catch {
+      setWalletMsg("Your wallet couldn't add the token automatically - add USDC manually using its contract address.");
     }
   }
 
@@ -256,34 +261,41 @@ export default function CabinetPage() {
           </div>
         )}
 
-        <div className="bg-white border border-stone-200 rounded-2xl p-5 space-y-3">
-          <div>
-            <p className="text-sm font-medium text-stone-900">See your money in your wallet</p>
+        {isEmbeddedWallet ? (
+          <div className="bg-white border border-stone-200 rounded-2xl p-5">
+            <p className="text-sm font-medium text-stone-900">Your built-in wallet</p>
             <p className="text-sm text-stone-500 mt-0.5">
-              Add the Arc Testnet network and the USDC token so your balance shows up in Trust,
-              MetaMask, or your wallet app.
+              You&apos;re using the wallet we created for you - it&apos;s already on Arc Testnet and
+              your balance always shows here. Adding a network or token is only needed if you connect
+              an external wallet like MetaMask or Trust.
             </p>
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={addArcNetwork}
-              className="py-2.5 border border-stone-200 hover:bg-stone-50 text-stone-700 text-sm font-medium rounded-xl transition-colors"
-            >
-              Add Arc network
-            </button>
-            <button
-              onClick={addUsdcToken}
-              className="py-2.5 border border-stone-200 hover:bg-stone-50 text-stone-700 text-sm font-medium rounded-xl transition-colors"
-            >
-              Add USDC token
-            </button>
+        ) : (
+          <div className="bg-white border border-stone-200 rounded-2xl p-5 space-y-3">
+            <div>
+              <p className="text-sm font-medium text-stone-900">See your money in your wallet</p>
+              <p className="text-sm text-stone-500 mt-0.5">
+                Add the Arc Testnet network and the USDC token so your balance shows up in Trust,
+                MetaMask, or your wallet app.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={addArcNetwork}
+                className="py-2.5 border border-stone-200 hover:bg-stone-50 text-stone-700 text-sm font-medium rounded-xl transition-colors"
+              >
+                Add Arc network
+              </button>
+              <button
+                onClick={addUsdcToken}
+                className="py-2.5 border border-stone-200 hover:bg-stone-50 text-stone-700 text-sm font-medium rounded-xl transition-colors"
+              >
+                Add USDC token
+              </button>
+            </div>
+            {walletMsg && <p className="text-xs text-stone-500">{walletMsg}</p>}
           </div>
-          {walletMsg && <p className="text-xs text-stone-500">{walletMsg}</p>}
-          <p className="text-xs text-stone-400">
-            Using the built-in wallet? Your balance is always shown here - adding to an app is only
-            needed for external wallets.
-          </p>
-        </div>
+        )}
 
         <div className="bg-white border border-stone-200 rounded-2xl overflow-hidden">
           <div className="px-4 py-3 border-b border-stone-100">
