@@ -113,7 +113,7 @@ export class CustodialSettlement implements SettlementProvider {
       }
 
       if (pickedPayouts.length === 0 && pickedStreams.length === 0) {
-        // No whole item fits — do a partial transfer of everything available.
+        // No whole item fits – do a partial transfer of everything available.
         // The first (smallest) payout is partially paid; its remaining amount
         // stays PENDING so the user can claim the rest once executor is topped up.
         const partialGross = onChainBalance;
@@ -154,7 +154,7 @@ export class CustodialSettlement implements SettlementProvider {
               : { status: "CLAIMED", txHash: partialTxHash, netAmount: partialNet, feeAmount: partialFee, claimedAt: new Date() },
           });
         } else {
-          // stream share — advance claimedAmount
+          // stream share – advance claimedAmount
           await prisma.streamShare.update({
             where: { id: target.data.share.id },
             data: { claimedAmount: target.data.share.claimedAmount + partialNet },

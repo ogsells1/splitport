@@ -96,12 +96,12 @@ const STEPS = [
   {
     n: "01",
     title: "Fund your treasury",
-    text: "Top up with a card or crypto. Your balance is held as USDC — a digital dollar, stable and instantly transferable.",
+    text: "Top up with a card or crypto. Your balance is held as USDC – a digital dollar, stable and instantly transferable.",
   },
   {
     n: "02",
     title: "Set the split",
-    text: "Percentages or fixed amounts per person. Invite people by link — they don't need a bank account or any crypto knowledge.",
+    text: "Percentages or fixed amounts per person. Invite people by link – they don't need a bank account or any crypto knowledge.",
   },
   {
     n: "03",
@@ -113,7 +113,7 @@ const STEPS = [
 const FEATURES = [
   {
     title: "Recurring payroll",
-    text: "Weekly or monthly auto-payouts with fixed amounts — a payroll cycle without the payroll provider.",
+    text: "Weekly or monthly auto-payouts with fixed amounts – a payroll cycle without the payroll provider.",
   },
   {
     title: "Revenue splits",
@@ -125,7 +125,7 @@ const FEATURES = [
   },
   {
     title: "Scheduled one-offs",
-    text: "Queue any number of future payments — bonuses, milestones, deferred invoices.",
+    text: "Queue any number of future payments – bonuses, milestones, deferred invoices.",
   },
   {
     title: "No-crypto onboarding",
@@ -197,7 +197,7 @@ export default function Home() {
             <span className="text-emerald-700">In one click.</span>
           </h1>
           <p className="mt-5 max-w-md text-lg leading-relaxed text-stone-500">
-            Fund a shared treasury, set each person&apos;s share, and distribute —
+            Fund a shared treasury, set each person&apos;s share, and distribute –
             by percentage, fixed salary, schedule, or a live stream. No banks,
             no borders, no crypto skills required.
           </p>
@@ -206,7 +206,7 @@ export default function Home() {
               onClick={openApp}
               className="rounded-xl bg-emerald-700 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-emerald-800"
             >
-              Start paying — it&apos;s free
+              Start paying
             </button>
             <a
               href="#how"
@@ -231,7 +231,7 @@ export default function Home() {
       <section id="how" className="border-y border-stone-200 bg-white">
         <div className="mx-auto max-w-6xl px-6 py-20">
           <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-            From money in to money out — three steps.
+            From money in to money out – three steps.
           </h2>
           <div className="mt-12 grid gap-10 sm:grid-cols-3">
             {STEPS.map((s) => (
@@ -256,7 +256,7 @@ export default function Home() {
         </h2>
         <p className="mt-3 max-w-lg text-stone-500">
           Whether it&apos;s contractor salaries, a rev-share collective, or
-          hackathon prizes — the same split engine handles it.
+          hackathon prizes – the same split engine handles it.
         </p>
         <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {FEATURES.map((f) => (
@@ -296,7 +296,20 @@ export default function Home() {
       <footer className="border-t border-stone-200">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-6 py-8 text-sm text-stone-400 sm:flex-row">
           <span>© {new Date().getFullYear()} SplitPort</span>
-          <span>Built on USDC · Powered by Stripe, Circle & Privy</span>
+          <div className="flex items-center gap-6">
+            <a
+              href="https://github.com/ogsells1/splitport"
+              target="_blank"
+              rel="noreferrer"
+              className="hover:text-stone-600"
+            >
+              GitHub
+            </a>
+            <a href="/terms" className="hover:text-stone-600">
+              Terms
+            </a>
+            <span>Built on USDC · Stripe, Circle & Privy</span>
+          </div>
         </div>
       </footer>
     </main>

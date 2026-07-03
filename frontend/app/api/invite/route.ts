@@ -1,5 +1,5 @@
 // frontend/app/api/invite/route.ts
-// POST /api/invite — owner adds a contributor to a project. Two ways:
+// POST /api/invite – owner adds a contributor to a project. Two ways:
 //   - by invite link: no wallet → creates a PENDING slot + inviteToken to share.
 //   - by wallet: a valid address → creates a CLAIMED contributor straight away.
 

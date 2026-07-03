@@ -1,7 +1,7 @@
 // frontend/app/api/invite/[token]/route.ts
-// GET    /api/invite/[token] — public, returns slot info for the invite-claim page
-// POST   /api/invite/[token] — participant claims the slot with their own wallet
-// DELETE /api/invite/[token] — owner revokes a not-yet-claimed invite
+// GET    /api/invite/[token] – public, returns slot info for the invite-claim page
+// POST   /api/invite/[token] – participant claims the slot with their own wallet
+// DELETE /api/invite/[token] – owner revokes a not-yet-claimed invite
 
 import { NextResponse } from "next/server";
 import { getAddress, isAddress, type Address } from "viem";
@@ -109,7 +109,7 @@ export async function POST(
       data: { wallet: wallet.toLowerCase() },
     });
 
-    // Vault mode: deferred settlement — call accrue() on each vault for the
+    // Vault mode: deferred settlement – call accrue() on each vault for the
     // reserved-but-not-yet-accrued amounts. The vault holds the funds; we now
     // tell it who can claim them.
     if (process.env.CUSTODY_MODE === "onchain" && deferredPayouts.length > 0) {
@@ -132,7 +132,7 @@ export async function POST(
             });
             await executor.publicClient.waitForTransactionReceipt({ hash: txHash });
           } catch (e) {
-            // Log but don't fail the invite claim — the DB payout is already
+            // Log but don't fail the invite claim – the DB payout is already
             // attached to the wallet and can be retried manually or via keeper.
             console.error("[invite claim] deferred accrue failed", contractAddress, e);
           }

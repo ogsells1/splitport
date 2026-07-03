@@ -1,5 +1,5 @@
 // frontend/app/api/project/create/route.ts
-// POST /api/project/create — create a DB-first project (no on-chain contract).
+// POST /api/project/create – create a DB-first project (no on-chain contract).
 // Contributors can be added by wallet (CLAIMED) or by invite (PENDING + token).
 // Neither owner nor contributors need a wallet or gas to create a project; payouts
 // run custodially through the treasury. The synthetic `db_…` id is used as the
@@ -81,7 +81,7 @@ export async function POST(request: Request) {
     }
 
     // In onchain mode, deploy a SplitVault via the factory so custody lives on-chain.
-    // In custodial mode, use a synthetic db_ id — existing routing branches on isAddress().
+    // In custodial mode, use a synthetic db_ id – existing routing branches on isAddress().
     let contractAddress: string;
     if (process.env.CUSTODY_MODE === "onchain") {
       const factoryAddress = process.env.VAULT_FACTORY_ADDRESS;

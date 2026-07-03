@@ -1,4 +1,4 @@
-# BYN Split Pay — Project Context
+# SplitPort — Project Context
 
 ## Что строим
 Платформа автоматического распределения доходов между участниками

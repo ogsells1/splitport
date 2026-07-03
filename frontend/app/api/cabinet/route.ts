@@ -1,5 +1,5 @@
 // frontend/app/api/cabinet/route.ts
-// GET /api/cabinet?wallet=0x... — a contributor's claimable balance and history.
+// GET /api/cabinet?wallet=0x... – a contributor's claimable balance and history.
 // Keyed by wallet; the caller passes their authenticated Privy wallet. Claimable
 // is the sum of pending lump-sum payouts plus accrued-but-unclaimed stream funds.
 

@@ -1,6 +1,6 @@
 // frontend/lib/auth.ts
 // Server-side Privy authentication. Every mutating or user-scoped API route must
-// derive the caller's identity from a verified Privy access token — never from a
+// derive the caller's identity from a verified Privy access token – never from a
 // privyId/wallet value supplied in the request body or query string.
 //
 // Client sends the token as `Authorization: Bearer <privy access token>`
@@ -106,7 +106,7 @@ export async function requireWallet(request: Request, wallet: string): Promise<s
 
 /**
  * Authorize a cron-triggered request (Vercel Cron sends `Authorization: Bearer
- * <CRON_SECRET>`). In production a missing CRON_SECRET fails closed — we never
+ * <CRON_SECRET>`). In production a missing CRON_SECRET fails closed – we never
  * leave the cron endpoints publicly triggerable on a deployed app. Outside
  * production a missing secret is allowed so local/dev runs work without config.
  */

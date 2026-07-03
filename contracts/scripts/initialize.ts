@@ -5,7 +5,7 @@ import { syncProjectToDb } from "./lib/syncDb";
 
 const VAULT_ADDRESS  = "0x2DB3dbDA6C5F5CfF3234CDBadD049D90412c1774";
 const USDC_ADDRESS   = "0x3600000000000000000000000000000000000000";
-const PROJECT_NAME   = "BYN Split Pay — Demo Project";
+const PROJECT_NAME   = "SplitPort — Demo Project";
 
 /**
  * Участники: адрес, basis points (сумма = 10000), роль.
@@ -64,7 +64,7 @@ const VAULT_ABI = [
 // ─── MAIN ──────────────────────────────────────────────────────────────────────
 
 async function main() {
-  console.log("\n🚀  BYN SplitVault — Initialize\n");
+  console.log("\n🚀  SplitPort SplitVault — Initialize\n");
 
   // --- Validate config ---
   validateContributors();

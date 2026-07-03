@@ -1,6 +1,6 @@
 // frontend/app/api/project/route.ts
-// GET  /api/project?contractAddress=0x...   — проект + участники
-// POST /api/project                          — создать/обновить проект (вызывается после deploy)
+// GET  /api/project?contractAddress=0x...   – проект + участники
+// POST /api/project                          – создать/обновить проект (вызывается после deploy)
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
@@ -102,11 +102,11 @@ export async function POST(request: Request) {
     const project = await prisma.project.upsert({
       where: { contractAddress },
       update: {
-        name: name ?? "BYN Split Pay",
+        name: name ?? "SplitPort Project",
         deployBlock: deployBlock ? BigInt(deployBlock) : undefined,
       },
       create: {
-        name: name ?? "BYN Split Pay",
+        name: name ?? "SplitPort Project",
         contractAddress,
         usdcAddress: usdcAddress ?? DEFAULT_USDC_ADDRESS,
         chainId: DEFAULT_CHAIN_ID,
@@ -121,7 +121,7 @@ export async function POST(request: Request) {
     });
 
     // Пересоздать contributors, отражающих on-chain состояние.
-    // Pending инвайты (ещё не привязан кошелёк) не на цепочке — их не трогаем.
+    // Pending инвайты (ещё не привязан кошелёк) не на цепочке – их не трогаем.
     await prisma.contributor.deleteMany({
       where: { projectId: project.id, status: "CLAIMED" },
     });

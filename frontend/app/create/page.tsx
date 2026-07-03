@@ -157,7 +157,7 @@ export default function CreateProjectPage() {
             </div>
           ) : (
             <p className="text-sm text-stone-400 text-center bg-white border border-stone-200 rounded-2xl px-4 py-6">
-              No invite links — all contributors were added by wallet.
+              No invite links – all contributors were added by wallet.
             </p>
           )}
 
@@ -193,7 +193,7 @@ export default function CreateProjectPage() {
         <div>
           <h1 className="text-xl font-semibold text-stone-900">Create New Project</h1>
           <p className="text-sm text-stone-500 mt-1">
-            Set up your split and invite contributors by link — no wallet or crypto needed to start.
+            Set up your split and invite contributors by link – no wallet or crypto needed to start.
           </p>
         </div>
 
