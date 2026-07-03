@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 // frontend/app/api/treasury/streams/route.ts
 // Owner-facing CRUD for Superfluid-style payout streams.
 //   GET    ?contractAddress=&ownerPrivyId=  - list streams with accrued/claimed totals

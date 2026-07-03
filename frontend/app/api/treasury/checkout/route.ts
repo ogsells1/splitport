@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 // frontend/app/api/treasury/checkout/route.ts
 // POST /api/treasury/checkout - create a Stripe Checkout Session for a card top-up.
 // On testnet we use a fixed 1 USD = 1 USDC rate. The actual treasury credit happens

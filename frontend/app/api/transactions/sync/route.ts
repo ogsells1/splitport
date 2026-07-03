@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 // frontend/app/api/transactions/sync/route.ts
 // POST /api/transactions/sync?contractAddress=0x...  - синк одного проекта (ручной вызов из UI)
 // GET  /api/transactions/sync[?contractAddress=0x...] - вызывается Vercel Cron Job (см. vercel.json).
