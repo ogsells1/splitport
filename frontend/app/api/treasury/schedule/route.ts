@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 // frontend/app/api/treasury/schedule/route.ts
 // Owner-facing CRUD for a project's automatic-payout schedule.
 //   GET    ?contractAddress=&ownerPrivyId=  - current schedule (or null)

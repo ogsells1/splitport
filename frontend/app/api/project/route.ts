@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 // frontend/app/api/project/route.ts
 // GET  /api/project?contractAddress=0x...   - проект + участники
 // POST /api/project                          - создать/обновить проект (вызывается после deploy)

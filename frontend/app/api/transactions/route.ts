@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 // frontend/app/api/transactions/route.ts
 // GET /api/transactions - список транзакций
 //   ?contractAddress=0x...   - только для этого проекта

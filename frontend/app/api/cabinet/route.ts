@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 // frontend/app/api/cabinet/route.ts
 // GET /api/cabinet?wallet=0x... - a contributor's claimable balance and history.
 // Keyed by wallet; the caller passes their authenticated Privy wallet. Claimable

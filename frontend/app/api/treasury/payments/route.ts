@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 // frontend/app/api/treasury/payments/route.ts
 // Owner-facing CRUD for a project's queue of one-off scheduled payouts. Unlike the
 // single recurring PayoutSchedule, a project can have any number of these - each a
