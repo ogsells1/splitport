@@ -15,8 +15,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
         loginMethods: ["google", "email", "wallet"],
         appearance: {
           theme: "light",
-          accentColor: "#6366f1",
-          logo: "/logo.png",
+          accentColor: "#047857",
+          logo: "/logo.svg",
         },
         defaultChain: arcTestnet,
         supportedChains: [arcTestnet],
