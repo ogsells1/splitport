@@ -1,6 +1,6 @@
 // frontend/app/api/transactions/sync/route.ts
-// POST /api/transactions/sync?contractAddress=0x...  – синк одного проекта (ручной вызов из UI)
-// GET  /api/transactions/sync[?contractAddress=0x...] – вызывается Vercel Cron Job (см. vercel.json).
+// POST /api/transactions/sync?contractAddress=0x...  - синк одного проекта (ручной вызов из UI)
+// GET  /api/transactions/sync[?contractAddress=0x...] - вызывается Vercel Cron Job (см. vercel.json).
 //      Без contractAddress синкает ВСЕ проекты в БД.
 
 import { NextRequest, NextResponse } from "next/server";
@@ -201,7 +201,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(result);
     }
 
-    // No contractAddress – cron mode: sync every project in the DB.
+    // No contractAddress - cron mode: sync every project in the DB.
     const projects = await prisma.project.findMany();
     const results = [];
     for (const project of projects) {

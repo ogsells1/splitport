@@ -85,7 +85,7 @@ function TreasuryInner() {
 
   const status = searchParams.get("status");
   useEffect(() => {
-    if (status === "success") setBanner("Card payment received – your treasury balance will update shortly.");
+    if (status === "success") setBanner("Card payment received - your treasury balance will update shortly.");
     if (status === "cancelled") setBanner("Card payment cancelled.");
   }, [status]);
 

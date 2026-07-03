@@ -134,7 +134,7 @@ export function ScheduledPayoutsRow({ address, ownerPrivyId, splitMode = "PERCEN
 
       {payments.length === 0 ? (
         <p className="text-sm text-stone-500">
-          Schedule individual payouts for specific dates – as many as you like.
+          Schedule individual payouts for specific dates - as many as you like.
         </p>
       ) : (
         <div className="divide-y divide-stone-100 -my-1">
@@ -175,7 +175,7 @@ export function ScheduledPayoutsRow({ address, ownerPrivyId, splitMode = "PERCEN
           <div className="flex gap-2">
             {isFixed ? (
               <div className="flex-1 flex items-center px-3 py-2.5 text-xs text-stone-500 bg-stone-50 rounded-lg">
-                Pays fixed amounts –{" "}
+                Pays fixed amounts -{" "}
                 <span className="font-medium text-stone-700 ml-1">
                   {parseFloat(formatUnits(BigInt(fixedTotal), 6)).toFixed(2)} USDC
                 </span>

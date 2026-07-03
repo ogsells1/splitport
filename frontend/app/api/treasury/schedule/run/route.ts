@@ -1,5 +1,5 @@
 // frontend/app/api/treasury/schedule/run/route.ts
-// GET /api/treasury/schedule/run – invoked by Vercel Cron (see vercel.json) once a
+// GET /api/treasury/schedule/run - invoked by Vercel Cron (see vercel.json) once a
 // day. Two things run here:
 //   1. Recurring PayoutSchedules whose nextRunAt is due → distribute, then advance
 //      nextRunAt (WEEKLY/MONTHLY) or deactivate (CUSTOM one-shot).

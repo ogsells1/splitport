@@ -1,5 +1,5 @@
 // frontend/app/api/contributor/route.ts
-// PATCH /api/contributor – owner edits a contributor's fixed payout amount
+// PATCH /api/contributor - owner edits a contributor's fixed payout amount
 // (FIXED-mode projects only). The split mode itself is immutable; only amounts
 // can change after creation.
 

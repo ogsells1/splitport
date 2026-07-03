@@ -1,10 +1,10 @@
 // frontend/app/api/cabinet/claim/route.ts
-// POST /api/cabinet/claim – a contributor claims everything owed to their wallet.
+// POST /api/cabinet/claim - a contributor claims everything owed to their wallet.
 //
 // Custodial: executor sends USDC (lump-sum payouts + stream accruals) in one transfer.
 // Vault (onchain):
-//   • Lump-sum payouts – executor calls claimFor() on each vault.
-//   • Streaming – still custodial (deferred to Phase 4+); settled via executor transfer.
+//   • Lump-sum payouts - executor calls claimFor() on each vault.
+//   • Streaming - still custodial (deferred to Phase 4+); settled via executor transfer.
 
 import { NextResponse } from "next/server";
 import { formatUnits, getAddress, isAddress, type Address } from "viem";
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
       return await claimOnchain(wallet);
     }
 
-    // Custodial mode – all logic in settlement layer.
+    // Custodial mode - all logic in settlement layer.
     const { txHash, gross, fee, net } = await settlement.settleClaim(wallet);
     return NextResponse.json({
       txHash,
@@ -95,7 +95,7 @@ async function claimOnchain(wallet: string) {
     }
   }
 
-  // ── Part 2: stream accruals (custodial fallback – streams deferred to Phase 4+) ──
+  // ── Part 2: stream accruals (custodial fallback - streams deferred to Phase 4+) ──
   const shares = await prisma.streamShare.findMany({
     where: { wallet: walletLc },
     include: { stream: true },
@@ -117,7 +117,7 @@ async function claimOnchain(wallet: string) {
           { status: 503 }
         );
       }
-      // Has vault payout but no executor for streams – skip stream part.
+      // Has vault payout but no executor for streams - skip stream part.
     } else {
       const { walletClient, publicClient, account } = executor;
       const usdc = getAddress(USDC_ADDRESS) as Address;

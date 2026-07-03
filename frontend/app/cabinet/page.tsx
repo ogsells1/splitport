@@ -61,7 +61,7 @@ export default function CabinetPage() {
       await provider.request({ method: "wallet_addEthereumChain", params: [ARC_CHAIN_PARAMS] });
       setWalletMsg("Arc Testnet added to your wallet ✓");
     } catch (e: any) {
-      setWalletMsg(e?.message ?? "Your wallet didn't add the network – you can add it manually.");
+      setWalletMsg(e?.message ?? "Your wallet didn't add the network - you can add it manually.");
     }
   }
 
@@ -76,7 +76,7 @@ export default function CabinetPage() {
       });
       setWalletMsg("USDC added to your wallet ✓");
     } catch (e: any) {
-      setWalletMsg(e?.message ?? "Your wallet didn't add the token – you can add it manually.");
+      setWalletMsg(e?.message ?? "Your wallet didn't add the token - you can add it manually.");
     }
   }
 
@@ -132,7 +132,7 @@ export default function CabinetPage() {
     );
   }
 
-  // Not signed in – explain and offer login.
+  // Not signed in - explain and offer login.
   if (!authenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6 bg-white">
@@ -140,7 +140,7 @@ export default function CabinetPage() {
           <h1 className="text-xl font-semibold text-stone-900">Your payouts</h1>
           <p className="text-sm text-stone-500">
             Sign in to see what you&apos;ve earned and send it to your wallet. No crypto experience
-            needed – we&apos;ll create a wallet for you automatically if you don&apos;t have one.
+            needed - we&apos;ll create a wallet for you automatically if you don&apos;t have one.
           </p>
           <button
             onClick={login}
@@ -195,7 +195,7 @@ export default function CabinetPage() {
               or the built-in wallet we created for you).
             </p>
             <p>
-              A small network fee for the transfer is taken out of your amount – so you receive your
+              A small network fee for the transfer is taken out of your amount - so you receive your
               share minus that fee, with nothing to pay upfront.
             </p>
           </div>
@@ -252,7 +252,7 @@ export default function CabinetPage() {
                 );
               })}
             <p className="text-xs text-stone-400">
-              This keeps growing every second. Claim anytime – it&apos;s included in your total above.
+              This keeps growing every second. Claim anytime - it&apos;s included in your total above.
             </p>
           </div>
         )}
@@ -281,7 +281,7 @@ export default function CabinetPage() {
           </div>
           {walletMsg && <p className="text-xs text-stone-500">{walletMsg}</p>}
           <p className="text-xs text-stone-400">
-            Using the built-in wallet? Your balance is always shown here – adding to an app is only
+            Using the built-in wallet? Your balance is always shown here - adding to an app is only
             needed for external wallets.
           </p>
         </div>

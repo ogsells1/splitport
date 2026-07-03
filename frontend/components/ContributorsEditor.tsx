@@ -342,7 +342,7 @@ export function ContributorsEditor({ vaultAddress, walletAddress, ownerPrivyId }
         {readyToSync.length > 0 && (
           <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 space-y-2">
             <p className="text-sm font-medium text-emerald-800">
-              ✓ {readyToSync.length === 1 ? "Invite confirmed" : `${readyToSync.length} invites confirmed`} –
+              ✓ {readyToSync.length === 1 ? "Invite confirmed" : `${readyToSync.length} invites confirmed`} -
               wallet linked
             </p>
             <ul className="space-y-1">
@@ -485,7 +485,7 @@ export function ContributorsEditor({ vaultAddress, walletAddress, ownerPrivyId }
                   {creatingInvite ? "Generating..." : "Generate invite link"}
                 </button>
                 <p className="text-xs text-stone-400">
-                  This share is reserved until the link is claimed – it won&apos;t count toward the
+                  This share is reserved until the link is claimed - it won&apos;t count toward the
                   100% on-chain until then.
                 </p>
               </>
@@ -510,7 +510,7 @@ export function ContributorsEditor({ vaultAddress, walletAddress, ownerPrivyId }
 
         {(info?.pendingBalance ?? 0n) > 0n && (
           <p className="text-xs text-amber-600 bg-amber-50 rounded-lg px-3 py-2">
-            ⚠ There is a pending balance – it will be distributed to the current
+            ⚠ There is a pending balance - it will be distributed to the current
             contributors before the replacement takes effect.
           </p>
         )}

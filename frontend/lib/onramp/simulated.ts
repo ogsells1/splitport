@@ -1,6 +1,6 @@
 // frontend/lib/onramp/simulated.ts
 // Testnet provider: a card payment credits the DB only (1 USD = 1 USDC), no real
-// USDC moves on-chain. This mirrors the current behavior – the live Stripe routes
+// USDC moves on-chain. This mirrors the current behavior - the live Stripe routes
 // (/api/treasury/checkout + /webhook) implement exactly this. Kept as a provider
 // so the mainnet swap is a config change, not a rewrite.
 //

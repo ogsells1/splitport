@@ -4,7 +4,7 @@
 // The whole point of the abstraction: on testnet a card payment only credits a
 // number in the DB (no real USDC moves). On mainnet a card payment must end with
 // real USDC landing on-chain in the treasury wallet, otherwise claims can't pay
-// out. Both flows produce the same end state – a CONFIRMED treasury deposit – so
+// out. Both flows produce the same end state - a CONFIRMED treasury deposit - so
 // distribute/claim logic stays identical; only how the money arrives differs.
 
 export type OnrampMode = "simulated" | "wallet-delivery";
@@ -53,7 +53,7 @@ export interface OnrampProvider {
   /**
    * Confirm a top-up from the provider's webhook/callback payload and return the
    * amount of USDC to credit. Implementations must be idempotent at the call site
-   * (dedupe by sessionId/txHash) – see the existing Stripe webhook + deposit-crypto
+   * (dedupe by sessionId/txHash) - see the existing Stripe webhook + deposit-crypto
    * routes for the dedupe pattern.
    */
   confirm(payload: unknown): Promise<SettlementResult>;

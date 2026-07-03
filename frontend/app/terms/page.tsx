@@ -1,5 +1,5 @@
 export const metadata = {
-  title: "Terms – SplitPort",
+  title: "Terms - SplitPort",
 };
 
 export default function TermsPage() {

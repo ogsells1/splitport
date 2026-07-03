@@ -21,7 +21,7 @@ function roleStyle(role: string) {
 }
 
 function fmt(val: bigint | undefined, decimals = 6) {
-  if (val === undefined) return "–";
+  if (val === undefined) return "-";
   return parseFloat(formatUnits(val, decimals)).toFixed(2);
 }
 
