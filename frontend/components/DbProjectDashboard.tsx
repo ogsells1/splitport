@@ -59,6 +59,12 @@ export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboard
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
 
+  // Inline editing of a contributor's display name + role.
+  const [editIdentityId, setEditIdentityId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editRole, setEditRole] = useState("");
+  const [savingIdentity, setSavingIdentity] = useState(false);
+
   const isFixed = splitMode === "FIXED";
 
   const load = useCallback(async () => {
@@ -171,6 +177,33 @@ export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboard
     setEditingId(null);
     setEditValue("");
     await load();
+  }
+
+  function startEditIdentity(c: Contributor) {
+    setEditIdentityId(c.id);
+    setEditName(c.name ?? "");
+    setEditRole(c.role);
+  }
+
+  async function saveIdentity(contributorId: string) {
+    if (!editRole.trim()) return;
+    setSavingIdentity(true);
+    try {
+      await authedFetch("/api/contributor", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ownerPrivyId,
+          contributorId,
+          name: editName.trim(),
+          role: editRole.trim(),
+        }),
+      });
+      setEditIdentityId(null);
+      await load();
+    } finally {
+      setSavingIdentity(false);
+    }
   }
 
   async function createInvite() {
@@ -295,16 +328,57 @@ export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboard
                     />
                   )}
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-stone-800">
-                      {c.name ? (
-                        <>
-                          {c.name}{" "}
-                          <span className="text-stone-400 font-normal">· {c.role}</span>
-                        </>
-                      ) : (
-                        c.role
-                      )}
-                    </p>
+                    {editIdentityId === c.id ? (
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <input
+                          type="text"
+                          placeholder="name (e.g. Maya K.)"
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          className="w-32 px-2 py-1 text-sm border border-stone-200 rounded-lg outline-none focus:border-emerald-500"
+                        />
+                        <input
+                          type="text"
+                          placeholder="role"
+                          value={editRole}
+                          onChange={(e) => setEditRole(e.target.value)}
+                          className="w-28 px-2 py-1 text-sm border border-stone-200 rounded-lg outline-none focus:border-emerald-500"
+                        />
+                        <button
+                          onClick={() => saveIdentity(c.id)}
+                          disabled={savingIdentity || !editRole.trim()}
+                          className="text-xs text-emerald-700 hover:text-emerald-800 disabled:text-stone-300"
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={() => setEditIdentityId(null)}
+                          className="text-xs text-stone-400 hover:text-stone-600"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ) : (
+                      <p className="text-sm font-medium text-stone-800">
+                        {c.name ? (
+                          <>
+                            {c.name}{" "}
+                            <span className="text-stone-400 font-normal">· {c.role}</span>
+                          </>
+                        ) : (
+                          c.role
+                        )}
+                        {isOwner && (
+                          <button
+                            onClick={() => startEditIdentity(c)}
+                            className="ml-2 text-xs text-stone-400 hover:text-emerald-700 font-normal"
+                            title="Edit name & role"
+                          >
+                            Edit
+                          </button>
+                        )}
+                      </p>
+                    )}
                     {c.status === "CLAIMED" && c.wallet ? (
                       <p className="text-xs text-stone-400 font-mono mt-0.5">
                         {c.wallet.slice(0, 6)}...{c.wallet.slice(-4)}

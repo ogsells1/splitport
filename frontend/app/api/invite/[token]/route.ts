@@ -28,6 +28,7 @@ export async function GET(
 
     return NextResponse.json({
       projectName: contributor.project.name,
+      name: contributor.name,
       role: contributor.role,
       percentage: contributor.percentage,
       fixedAmount: contributor.fixedAmount != null ? contributor.fixedAmount.toString() : null,
