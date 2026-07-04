@@ -29,9 +29,10 @@ trustless custody today — we're showing a working product with a credible on-c
 ## Metrics
 
 - `SplitVault.sol`: 19/19 tests green.
-- End-to-end demo: login → funded treasury → distribute → invite claim → USDC in an
-  external wallet (MetaMask), verifiable on https://testnet.arcscan.app.
-- _(Fill in from the live run: number of testnet tx, wall-clock time from invite to funds.)_
+- End-to-end verified on Arc Testnet: login → funded treasury (Stripe card) →
+  distribute by % → contributor claim → USDC settled on-chain, fee deducted.
+- Sample settlement tx (5.00 USDC claim): [0x1f74cee2…24cc26](https://testnet.arcscan.app/tx/0x1f74cee2bda1b546d6a5edb61cd5915e84e148f0b0b583facb1772049b24cc26)
+- Gas paid by the executor in USDC — recipient receives their share minus fee, nothing upfront.
 
 ## Ask
 

@@ -53,3 +53,19 @@
 ## Критерий готовности
 
 Сценарий демо от логина до USDC в MetaMask проходит на проде без единого сбоя дважды подряд; репо и все витрины называются SplitPort; ARC_PITCH.md готов.
+
+## Результаты прогона (2026-07-04)
+
+Сквозной live-тест на https://splitport.vercel.app пройден:
+
+1. Логин через Privy (Google) → `/create`: DB-проект PERCENTAGE, контрибьюторы с именами/ролями (Maya K. / Design Lead и др.).
+2. `/treasury`: пополнение картой через Stripe (тестовая 4242…) — баланс отобразился (вебхук на splitport.vercel.app работает).
+3. Distribute по %: payouts созданы, доля pending-инвайта зарезервирована.
+4. Инвайт-ссылка под вторым Google-аккаунтом → привязка встроенного кошелька → payout стал claimable.
+5. `/cabinet` → Claim (5.00 USDC) прошёл **полностью**, executor отправил USDC on-chain, комиссия вычтена.
+   - tx: https://testnet.arcscan.app/tx/0x1f74cee2bda1b546d6a5edb61cd5915e84e148f0b0b583facb1772049b24cc26
+6. В кабинете — прямая ссылка на tx в arcscan (баннер + история выплат).
+
+Инфраструктура: прод-домен `splitport.vercel.app` перевешен на актуальный Vercel-проект; env Production живы; Stripe webhook на актуальном домене; executor `0xf89f…7A56` пополнен с фаусета Circle.
+
+Ограничение: фаусет даёт 20 USDC / 2ч, поэтому крупные витринные раздачи не клеймятся целиком (partial-claim) — живой claim делаем на маленьких суммах (~2-5 USDC).
