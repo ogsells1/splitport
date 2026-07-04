@@ -58,6 +58,7 @@ export async function GET(request: Request) {
         wallet: c.wallet,
         percentage: c.percentage,
         fixedAmount: c.fixedAmount != null ? c.fixedAmount.toString() : null,
+        name: c.name,
         role: c.role,
         totalPaid: c.totalPaid.toString(),
         status: c.status,
