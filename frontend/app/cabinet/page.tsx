@@ -50,6 +50,7 @@ export default function CabinetPage() {
   const [claiming, setClaiming] = useState(false);
   const [error, setError] = useState("");
   const [banner, setBanner] = useState("");
+  const [bannerTx, setBannerTx] = useState<string | null>(null);
   const [walletMsg, setWalletMsg] = useState("");
 
   const activeWallet = wallets[0];
@@ -111,6 +112,7 @@ export default function CabinetPage() {
     if (!walletAddress || claimable === 0n) return;
     setError("");
     setBanner("");
+    setBannerTx(null);
     setClaiming(true);
     try {
       const res = await authedFetch("/api/cabinet/claim", {
@@ -133,6 +135,9 @@ export default function CabinetPage() {
       } else {
         setBanner(`Sent ${net} USDC to your wallet. ✓`);
       }
+      // First on-chain tx hash for this claim (strip the "-i" suffix we add per item).
+      const hash = (data.txHash ?? data.txHashes?.[0] ?? "").split("-")[0];
+      setBannerTx(hash || null);
       await loadCabinet();
     } catch (e: any) {
       setError(e.message ?? "Claim failed");
@@ -190,7 +195,22 @@ export default function CabinetPage() {
         </div>
 
         {banner && (
-          <div className="bg-emerald-50 text-emerald-700 text-sm rounded-xl px-4 py-3">{banner}</div>
+          <div className="bg-emerald-50 text-emerald-700 text-sm rounded-xl px-4 py-3">
+            {banner}
+            {bannerTx && (
+              <>
+                {" "}
+                <a
+                  href={`https://testnet.arcscan.app/tx/${bannerTx}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-medium underline hover:text-emerald-800"
+                >
+                  View on explorer →
+                </a>
+              </>
+            )}
+          </div>
         )}
         {error && <div className="bg-red-50 text-red-600 text-sm rounded-xl px-4 py-3">{error}</div>}
 
