@@ -6,6 +6,7 @@ import { authedFetch } from "@/lib/apiClient";
 
 type InviteInfo = {
   projectName: string;
+  name: string | null;
   role: string;
   percentage: number;
   fixedAmount: string | null;
@@ -110,7 +111,14 @@ export default function InvitePage({ params }: { params: { token: string } }) {
         </div>
 
         <div className="bg-stone-50 rounded-xl p-4 space-y-1">
-          <p className="text-sm text-stone-500">Role</p>
+          {invite.name && (
+            <>
+              <p className="text-sm text-stone-500">Name</p>
+              <p className="font-medium text-stone-900">{invite.name}</p>
+              <p className="text-sm text-stone-500 mt-2">Role</p>
+            </>
+          )}
+          {!invite.name && <p className="text-sm text-stone-500">Role</p>}
           <p className="font-medium text-stone-900">{invite.role}</p>
           <p className="text-sm text-stone-500 mt-2">Share</p>
           <p className="font-medium text-stone-900">
