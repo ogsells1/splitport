@@ -17,6 +17,7 @@ const DEFAULT_USDC_ADDRESS = "0x3600000000000000000000000000000000000000";
 const DEFAULT_CHAIN_ID = 5042002;
 
 interface RowInput {
+  name?: string | null;
   role: string;
   percentage?: number; // basis points (PERCENTAGE mode)
   amount?: number; // fixed USDC per payout (FIXED mode)
@@ -157,6 +158,7 @@ export async function POST(request: Request) {
               projectId: project.id,
               wallet: c.wallet!.toLowerCase(),
               ...shareFields(c),
+              name: c.name?.trim() || null,
               role: c.role.trim(),
               status: "CLAIMED",
             },
@@ -175,6 +177,7 @@ export async function POST(request: Request) {
             projectId: project.id,
             wallet: null,
             ...shareFields(c),
+            name: c.name?.trim() || null,
             role: c.role.trim(),
             status: "PENDING",
             inviteToken,

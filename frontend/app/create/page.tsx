@@ -9,7 +9,7 @@ import { isAddress } from "viem";
 
 type Mode = "wallet" | "invite";
 type SplitMode = "PERCENTAGE" | "FIXED";
-type Row = { mode: Mode; wallet: string; percentage: string; amount: string; role: string };
+type Row = { mode: Mode; wallet: string; percentage: string; amount: string; name: string; role: string };
 
 type CreatedInvite = { role: string; percentage: number; amount: number | null; inviteUrl: string };
 
@@ -19,7 +19,7 @@ export default function CreateProjectPage() {
 
   const [name, setName] = useState("");
   const [splitMode, setSplitMode] = useState<SplitMode>("PERCENTAGE");
-  const [rows, setRows] = useState<Row[]>([{ mode: "invite", wallet: "", percentage: "", amount: "", role: "" }]);
+  const [rows, setRows] = useState<Row[]>([{ mode: "invite", wallet: "", percentage: "", amount: "", name: "", role: "" }]);
   const [busy, setBusy] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -64,7 +64,7 @@ export default function CreateProjectPage() {
     setRows((prev) => prev.map((r, idx) => (idx === i ? { ...r, mode, wallet: mode === "invite" ? "" : r.wallet } : r)));
   }
   function addRow() {
-    setRows((prev) => [...prev, { mode: "invite", wallet: "", percentage: "", amount: "", role: "" }]);
+    setRows((prev) => [...prev, { mode: "invite", wallet: "", percentage: "", amount: "", name: "", role: "" }]);
   }
   function removeRow(i: number) {
     setRows((prev) => prev.filter((_, idx) => idx !== i));
@@ -83,6 +83,7 @@ export default function CreateProjectPage() {
           name: name.trim(),
           splitMode,
           contributors: rows.map((r) => ({
+            name: r.name.trim() || null,
             role: r.role.trim(),
             percentage: isFixed ? 0 : Math.round(parseFloat(r.percentage) * 100),
             amount: isFixed ? parseFloat(r.amount) : undefined,
@@ -252,7 +253,14 @@ export default function CreateProjectPage() {
                 <div className="flex gap-1.5">
                   <input
                     type="text"
-                    placeholder="role (e.g. artist)"
+                    placeholder="name (e.g. Maya K.)"
+                    value={row.name}
+                    onChange={(e) => updateRow(i, "name", e.target.value)}
+                    className="flex-1 px-3 py-2 text-sm border border-stone-200 rounded-lg outline-none focus:border-emerald-500 transition-colors"
+                  />
+                  <input
+                    type="text"
+                    placeholder="role (e.g. Design Lead)"
                     value={row.role}
                     onChange={(e) => updateRow(i, "role", e.target.value)}
                     className="flex-1 px-3 py-2 text-sm border border-stone-200 rounded-lg outline-none focus:border-emerald-500 transition-colors"

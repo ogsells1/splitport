@@ -12,6 +12,7 @@ interface Contributor {
   wallet: string | null;
   percentage: number;
   fixedAmount: string | null; // USDC 6 dec, FIXED mode
+  name: string | null;
   role: string;
   status: "PENDING" | "CLAIMED";
   inviteToken?: string;
@@ -294,7 +295,16 @@ export function DbProjectDashboard({ address, ownerPrivyId }: DbProjectDashboard
                     />
                   )}
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-stone-800">{c.role}</p>
+                    <p className="text-sm font-medium text-stone-800">
+                      {c.name ? (
+                        <>
+                          {c.name}{" "}
+                          <span className="text-stone-400 font-normal">· {c.role}</span>
+                        </>
+                      ) : (
+                        c.role
+                      )}
+                    </p>
                     {c.status === "CLAIMED" && c.wallet ? (
                       <p className="text-xs text-stone-400 font-mono mt-0.5">
                         {c.wallet.slice(0, 6)}...{c.wallet.slice(-4)}
