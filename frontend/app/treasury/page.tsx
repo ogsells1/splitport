@@ -375,7 +375,7 @@ function TreasuryInner() {
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-stone-900 truncate">{d.projectName}</p>
                   <p className="text-xs text-stone-400">
-                    {new Date(d.createdAt).toLocaleDateString()} · split by contributor %
+                    {new Date(d.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })} · split by contributor %
                   </p>
                 </div>
                 <span className="text-sm font-medium text-stone-900 whitespace-nowrap">
