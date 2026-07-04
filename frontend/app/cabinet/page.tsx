@@ -121,7 +121,18 @@ export default function CabinetPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Claim failed");
       const net = parseFloat(formatUnits(BigInt(data.net), 6)).toFixed(2);
-      setBanner(`Sent ${net} USDC to your wallet. ✓`);
+      // A partial claim happens when the payout wallet can't cover everything owed:
+      // it pays what fits and leaves the rest claimable. `gross` is what settled now.
+      const settled = BigInt(data.gross ?? data.net ?? "0");
+      const wasPartial = settled < claimable;
+      if (wasPartial) {
+        const remaining = parseFloat(formatUnits(claimable - settled, 6)).toFixed(2);
+        setBanner(
+          `Sent ${net} USDC to your wallet. ✓ The payout wallet is topping up — ${remaining} USDC stays claimable, try again shortly.`
+        );
+      } else {
+        setBanner(`Sent ${net} USDC to your wallet. ✓`);
+      }
       await loadCabinet();
     } catch (e: any) {
       setError(e.message ?? "Claim failed");
