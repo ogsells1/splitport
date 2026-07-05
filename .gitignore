@@ -36,6 +36,9 @@ coverage/
 wallet.json
 secret.json
 
+# Circle entity secret / recovery material - never commit
+circle-secrets/
+
 # uploads
 uploads/
 
