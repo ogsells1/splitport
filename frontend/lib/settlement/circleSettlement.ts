@@ -1,13 +1,15 @@
-import { formatUnits, getAddress, isAddress, type Address } from "viem";
+import { isAddress, formatUnits } from "viem";
 import { prisma } from "@/lib/prisma";
-import { getExecutor } from "@/lib/executor";
-import { USDC_ADDRESS, USDC_ABI } from "@/lib/contract";
 import { getAvailableBalance } from "@/lib/treasuryBalance";
 import { claimableNow } from "@/lib/stream";
+import { getCircleUsdcBalance, estimateCircleFee, circleTransferUsdc } from "@/lib/circleWallet";
 import { resolvePayoutAddress } from "./payoutDestination";
 import type { SettlementProvider, ShareLine } from "./types";
 
-export class CustodialSettlement implements SettlementProvider {
+// Same custodial ledger as CustodialSettlement (Postgres-tracked payouts/streams),
+// but the actual on-chain transfer is signed by a Circle Developer-Controlled
+// Wallet instead of the viem EXECUTOR_PRIVATE_KEY.
+export class CircleSettlement implements SettlementProvider {
   readonly mode = "custodial" as const;
 
   availableBalance(ownerId: string, _contractAddress?: string): Promise<bigint> {
@@ -44,15 +46,9 @@ export class CustodialSettlement implements SettlementProvider {
     fee: bigint;
     net: bigint;
   }> {
-    const executor = getExecutor();
-    if (!executor) {
-      throw Object.assign(
-        new Error("Claims are not configured (missing EXECUTOR_PRIVATE_KEY)."),
-        { status: 503 }
-      );
-    }
     if (!isAddress(wallet)) throw new Error("Invalid wallet address");
 
+    const to = await resolvePayoutAddress(wallet);
     const walletLc = wallet.toLowerCase();
     const now = new Date();
     const [pending, shares] = await Promise.all([
@@ -72,26 +68,15 @@ export class CustodialSettlement implements SettlementProvider {
     const totalOwed = grossPayouts + grossStreams;
     if (totalOwed === 0n) throw new Error("Nothing to claim");
 
-    const { walletClient, publicClient, account } = executor;
-    const usdc = getAddress(USDC_ADDRESS) as Address;
-    const to = getAddress(await resolvePayoutAddress(wallet)) as Address;
+    const circleBalance = await getCircleUsdcBalance();
 
-    const onChainBalance = (await publicClient.readContract({
-      address: usdc,
-      abi: USDC_ABI,
-      functionName: "balanceOf",
-      args: [account.address],
-    })) as bigint;
-
-    // Partial claim: if the executor doesn't have enough for everything, greedily
-    // select full items (smallest first) that fit within the available balance.
-    // Remaining items stay PENDING for the next claim.
+    // Partial claim: if the Circle wallet doesn't have enough for everything,
+    // greedily select full items (smallest first) that fit. The rest stay PENDING.
     let selectedPayouts = pending;
     let selectedStreams = streamClaims;
     let gross = totalOwed;
 
-    if (onChainBalance < totalOwed) {
-      // Build a list of all claimable items sorted by amount ascending.
+    if (circleBalance < totalOwed) {
       type Item =
         | { kind: "payout"; data: (typeof pending)[number]; amount: bigint }
         | { kind: "stream"; data: (typeof streamClaims)[number]; amount: bigint };
@@ -101,7 +86,7 @@ export class CustodialSettlement implements SettlementProvider {
         ...streamClaims.map((c) => ({ kind: "stream" as const, data: c, amount: c.amount })),
       ].sort((a, b) => (a.amount < b.amount ? -1 : 1));
 
-      let budget = onChainBalance;
+      let budget = circleBalance;
       const pickedPayouts: typeof pending = [];
       const pickedStreams: typeof streamClaims = [];
 
@@ -114,18 +99,10 @@ export class CustodialSettlement implements SettlementProvider {
       }
 
       if (pickedPayouts.length === 0 && pickedStreams.length === 0) {
-        // No whole item fits - do a partial transfer of everything available.
-        // The first (smallest) payout is partially paid; its remaining amount
-        // stays PENDING so the user can claim the rest once executor is topped up.
-        const partialGross = onChainBalance;
+        const partialGross = circleBalance;
         let partialFee: bigint;
         try {
-          const gas = await publicClient.estimateContractGas({
-            address: usdc, abi: USDC_ABI, functionName: "transfer",
-            args: [to, partialGross], account,
-          });
-          const gasPrice = await publicClient.getGasPrice();
-          partialFee = ((gas * gasPrice * 12n) / 10n) / 10n ** 12n;
+          partialFee = await estimateCircleFee(to, partialGross);
         } catch {
           partialFee = 0n;
         }
@@ -133,19 +110,15 @@ export class CustodialSettlement implements SettlementProvider {
         if (partialNet === 0n) {
           throw Object.assign(
             new Error(
-              `Payout wallet balance (${formatUnits(onChainBalance, 6)} USDC) is too low to cover the transfer fee. Top it up and try again.`
+              `Circle wallet balance (${formatUnits(circleBalance, 6)} USDC) is too low to cover the transfer fee. Top it up and try again.`
             ),
             { status: 409 }
           );
         }
 
-        const partialTxHash = await walletClient.writeContract({
-          address: usdc, abi: USDC_ABI, functionName: "transfer", args: [to, partialNet],
-        });
-        await publicClient.waitForTransactionReceipt({ hash: partialTxHash });
+        const partialTxHash = await circleTransferUsdc(to, partialNet);
 
-        // Reduce the first payout by the net transferred; keep it PENDING for the rest.
-        const target = items[0]; // smallest item
+        const target = items[0];
         if (target.kind === "payout") {
           const remaining = target.amount - partialNet;
           await prisma.payout.update({
@@ -155,7 +128,6 @@ export class CustodialSettlement implements SettlementProvider {
               : { status: "CLAIMED", txHash: partialTxHash, netAmount: partialNet, feeAmount: partialFee, claimedAt: new Date() },
           });
         } else {
-          // stream share - advance claimedAmount
           await prisma.streamShare.update({
             where: { id: target.data.share.id },
             data: { claimedAmount: target.data.share.claimedAmount + partialNet },
@@ -184,19 +156,10 @@ export class CustodialSettlement implements SettlementProvider {
 
     let fee: bigint;
     try {
-      const gas = await publicClient.estimateContractGas({
-        address: usdc,
-        abi: USDC_ABI,
-        functionName: "transfer",
-        args: [to, gross],
-        account,
-      });
-      const gasPrice = await publicClient.getGasPrice();
-      const feeWei = (gas * gasPrice * 12n) / 10n;
-      fee = feeWei / 10n ** 12n;
+      fee = await estimateCircleFee(to, gross);
     } catch {
       throw Object.assign(
-        new Error("Could not estimate the transfer fee. Try again shortly."),
+        new Error("Could not estimate the Circle transfer fee. Try again shortly."),
         { status: 502 }
       );
     }
@@ -204,13 +167,7 @@ export class CustodialSettlement implements SettlementProvider {
     if (gross <= fee) throw new Error("Your balance is too small to cover the transfer fee yet.");
     const net = gross - fee;
 
-    const txHash = await walletClient.writeContract({
-      address: usdc,
-      abi: USDC_ABI,
-      functionName: "transfer",
-      args: [to, net],
-    });
-    await publicClient.waitForTransactionReceipt({ hash: txHash });
+    const txHash = await circleTransferUsdc(to, net);
 
     const claimedAt = new Date();
     await prisma.$transaction(async (tx) => {

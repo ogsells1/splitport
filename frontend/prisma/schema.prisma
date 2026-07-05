@@ -187,6 +187,12 @@ model Contributor {
   inviteToken      String?           @unique
   claimedByPrivyId String?
 
+  // Optional Circle User-Controlled Wallet, additive to the Privy wallet above.
+  // When set, claims still authenticate via the Privy `wallet` but the on-chain
+  // transfer destination becomes `circleWallet` instead.
+  circleUserId String?
+  circleWallet String?
+
   project      Project       @relation(fields: [projectId], references: [id])
   payouts      Payout[]
   streamShares StreamShare[]

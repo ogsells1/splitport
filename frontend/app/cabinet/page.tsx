@@ -2,6 +2,7 @@
 
 import Logo from "@/components/Logo";
 import AppNav from "@/components/AppNav";
+import CircleWalletCard from "@/components/CircleWalletCard";
 import { useEffect, useState } from "react";
 import { authedFetch } from "@/lib/apiClient";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
@@ -327,6 +328,8 @@ export default function CabinetPage() {
             {walletMsg && <p className="text-xs text-stone-500">{walletMsg}</p>}
           </div>
         )}
+
+        {walletAddress && <CircleWalletCard wallet={walletAddress} />}
 
         <div className="bg-white border border-stone-200 rounded-2xl overflow-hidden">
           <div className="px-4 py-3 border-b border-stone-100">
