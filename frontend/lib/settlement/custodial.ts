@@ -5,6 +5,7 @@ import { USDC_ADDRESS, USDC_ABI } from "@/lib/contract";
 import { getAvailableBalance } from "@/lib/treasuryBalance";
 import { claimableNow } from "@/lib/stream";
 import { resolvePayoutAddress } from "./payoutDestination";
+import { bridgeUsdcFromArc, type BridgeDestination } from "@/lib/bridgeKit";
 import type { SettlementProvider, ShareLine } from "./types";
 
 export class CustodialSettlement implements SettlementProvider {
@@ -38,7 +39,7 @@ export class CustodialSettlement implements SettlementProvider {
     return { distributionId };
   }
 
-  async settleClaim(wallet: string, _contractAddress?: string): Promise<{
+  async settleClaim(wallet: string, _contractAddress?: string, destinationChain?: BridgeDestination): Promise<{
     txHash: string;
     gross: bigint;
     fee: bigint;
@@ -139,10 +140,15 @@ export class CustodialSettlement implements SettlementProvider {
           );
         }
 
-        const partialTxHash = await walletClient.writeContract({
-          address: usdc, abi: USDC_ABI, functionName: "transfer", args: [to, partialNet],
-        });
-        await publicClient.waitForTransactionReceipt({ hash: partialTxHash });
+        const partialTxHash = destinationChain
+          ? (await bridgeUsdcFromArc(destinationChain, to, formatUnits(partialNet, 6))).txHash
+          : await (async () => {
+              const hash = await walletClient.writeContract({
+                address: usdc, abi: USDC_ABI, functionName: "transfer", args: [to, partialNet],
+              });
+              await publicClient.waitForTransactionReceipt({ hash });
+              return hash;
+            })();
 
         // Reduce the first payout by the net transferred; keep it PENDING for the rest.
         const target = items[0]; // smallest item
@@ -182,6 +188,10 @@ export class CustodialSettlement implements SettlementProvider {
         selectedStreams.reduce((s, c) => s + c.amount, 0n);
     }
 
+    // Fee estimate is based on a same-chain transfer even when bridging - CCTP's
+    // approve+burn+mint costs more, but this keeps the contributor-facing fee
+    // math simple and consistent for a testnet demo. Revisit with Bridge Kit's
+    // own cost-estimation API before handling non-trivial mainnet amounts.
     let fee: bigint;
     try {
       const gas = await publicClient.estimateContractGas({
@@ -204,13 +214,15 @@ export class CustodialSettlement implements SettlementProvider {
     if (gross <= fee) throw new Error("Your balance is too small to cover the transfer fee yet.");
     const net = gross - fee;
 
-    const txHash = await walletClient.writeContract({
-      address: usdc,
-      abi: USDC_ABI,
-      functionName: "transfer",
-      args: [to, net],
-    });
-    await publicClient.waitForTransactionReceipt({ hash: txHash });
+    const txHash = destinationChain
+      ? (await bridgeUsdcFromArc(destinationChain, to, formatUnits(net, 6))).txHash
+      : await (async () => {
+          const hash = await walletClient.writeContract({
+            address: usdc, abi: USDC_ABI, functionName: "transfer", args: [to, net],
+          });
+          await publicClient.waitForTransactionReceipt({ hash });
+          return hash;
+        })();
 
     const claimedAt = new Date();
     await prisma.$transaction(async (tx) => {
