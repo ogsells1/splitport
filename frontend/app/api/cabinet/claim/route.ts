@@ -10,10 +10,18 @@ import { NextResponse } from "next/server";
 import { formatUnits, getAddress, isAddress, type Address } from "viem";
 import { prisma } from "@/lib/prisma";
 import { getSettlement } from "@/lib/settlement";
+import { CustodialSettlement } from "@/lib/settlement/custodial";
 import { getExecutor } from "@/lib/executor";
 import { USDC_ADDRESS, USDC_ABI } from "@/lib/contract";
 import { claimableNow } from "@/lib/stream";
 import { requireWallet, authErrorResponse } from "@/lib/auth";
+import { SUPPORTED_BRIDGE_CHAINS, type BridgeDestination } from "@/lib/bridgeKit";
+
+function parseDestinationChain(value: unknown): BridgeDestination | undefined {
+  if (typeof value !== "string" || value === "arc") return undefined;
+  if (value in SUPPORTED_BRIDGE_CHAINS) return value as BridgeDestination;
+  throw Object.assign(new Error(`Unsupported destination chain: ${value}`), { status: 400 });
+}
 
 export async function POST(request: Request) {
   try {
@@ -22,6 +30,7 @@ export async function POST(request: Request) {
     if (!wallet || !isAddress(wallet)) {
       return NextResponse.json({ error: "A valid wallet is required" }, { status: 400 });
     }
+    const destinationChain = parseDestinationChain(body.destinationChain);
 
     try {
       await requireWallet(request, wallet);
@@ -36,8 +45,17 @@ export async function POST(request: Request) {
       return await claimOnchain(wallet);
     }
 
+    if (destinationChain && !(settlement instanceof CustodialSettlement)) {
+      return NextResponse.json(
+        { error: "Claiming on another chain is only available in the default settlement mode right now." },
+        { status: 400 }
+      );
+    }
+
     // Custodial mode - all logic in settlement layer.
-    const { txHash, gross, fee, net } = await settlement.settleClaim(wallet);
+    const { txHash, gross, fee, net } = destinationChain
+      ? await (settlement as CustodialSettlement).settleClaim(wallet, undefined, destinationChain)
+      : await settlement.settleClaim(wallet);
     return NextResponse.json({
       txHash,
       gross: gross.toString(),

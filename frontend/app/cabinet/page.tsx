@@ -52,7 +52,9 @@ export default function CabinetPage() {
   const [error, setError] = useState("");
   const [banner, setBanner] = useState("");
   const [bannerTx, setBannerTx] = useState<string | null>(null);
+  const [bannerExplorer, setBannerExplorer] = useState("https://testnet.arcscan.app/tx/");
   const [walletMsg, setWalletMsg] = useState("");
+  const [destinationChain, setDestinationChain] = useState<"arc" | "base-sepolia">("arc");
 
   const activeWallet = wallets[0];
   const walletAddress = activeWallet?.address as Address | undefined;
@@ -119,11 +121,12 @@ export default function CabinetPage() {
       const res = await authedFetch("/api/cabinet/claim", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ wallet: walletAddress }),
+        body: JSON.stringify({ wallet: walletAddress, destinationChain }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Claim failed");
       const net = parseFloat(formatUnits(BigInt(data.net), 6)).toFixed(2);
+      const chainLabel = destinationChain === "base-sepolia" ? "Base Sepolia" : "your wallet";
       // A partial claim happens when the payout wallet can't cover everything owed:
       // it pays what fits and leaves the rest claimable. `gross` is what settled now.
       const settled = BigInt(data.gross ?? data.net ?? "0");
@@ -131,14 +134,17 @@ export default function CabinetPage() {
       if (wasPartial) {
         const remaining = parseFloat(formatUnits(claimable - settled, 6)).toFixed(2);
         setBanner(
-          `Sent ${net} USDC to your wallet. ✓ The payout wallet is topping up — ${remaining} USDC stays claimable, try again shortly.`
+          `Sent ${net} USDC to ${chainLabel}. ✓ The payout wallet is topping up — ${remaining} USDC stays claimable, try again shortly.`
         );
       } else {
-        setBanner(`Sent ${net} USDC to your wallet. ✓`);
+        setBanner(`Sent ${net} USDC to ${chainLabel}. ✓`);
       }
       // First on-chain tx hash for this claim (strip the "-i" suffix we add per item).
       const hash = (data.txHash ?? data.txHashes?.[0] ?? "").split("-")[0];
       setBannerTx(hash || null);
+      setBannerExplorer(
+        destinationChain === "base-sepolia" ? "https://sepolia.basescan.org/tx/" : "https://testnet.arcscan.app/tx/"
+      );
       await loadCabinet();
     } catch (e: any) {
       setError(e.message ?? "Claim failed");
@@ -202,7 +208,7 @@ export default function CabinetPage() {
               <>
                 {" "}
                 <a
-                  href={`https://testnet.arcscan.app/tx/${bannerTx}`}
+                  href={`${bannerExplorer}${bannerTx}`}
                   target="_blank"
                   rel="noreferrer"
                   className="font-medium underline hover:text-emerald-800"
@@ -242,6 +248,19 @@ export default function CabinetPage() {
               <p className="text-xs text-stone-600 font-mono break-all">{walletAddress}</p>
             </div>
           )}
+
+          <div>
+            <p className="text-xs text-stone-400 mb-1">Receive on</p>
+            <select
+              value={destinationChain}
+              onChange={(e) => setDestinationChain(e.target.value as "arc" | "base-sepolia")}
+              disabled={claiming}
+              className="w-full py-2.5 px-3 border border-stone-200 rounded-xl text-sm text-stone-700 bg-white"
+            >
+              <option value="arc">Arc Testnet (default, same-chain)</option>
+              <option value="base-sepolia">Base Sepolia — bridged via Circle CCTP</option>
+            </select>
+          </div>
 
           <button
             onClick={handleClaim}
