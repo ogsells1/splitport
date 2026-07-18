@@ -10,6 +10,7 @@ import { formatUnits, parseUnits, getAddress, type Address } from "viem";
 import { useWriteContract, useWaitForTransactionReceipt, useReadContract } from "wagmi";
 import { USDC_ADDRESS, USDC_ABI } from "@/lib/contract";
 import { TreasuryDistributeRow } from "@/components/TreasuryDistributeRow";
+import UnifiedBalanceTopUpCard from "@/components/UnifiedBalanceTopUpCard";
 
 const TREASURY_ADDRESS = process.env.NEXT_PUBLIC_TREASURY_ADDRESS;
 
@@ -292,6 +293,8 @@ function TreasuryInner() {
               <p className="text-xs text-stone-400">Treasury address not configured.</p>
             )}
           </div>
+
+          <UnifiedBalanceTopUpCard onCredited={loadTreasury} />
         </div>
 
         <div className="bg-white border border-stone-200 rounded-2xl overflow-hidden">
