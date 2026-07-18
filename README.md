@@ -22,7 +22,7 @@ Google login; gas is paid by the executor in USDC, so no crypto skills are requi
 - **Chain:** Arc Testnet, USDC settlement; `SplitVault.sol` (Solidity, Hardhat, 19 tests) — `contracts/`
 - **Onramp:** Stripe (card → USDC, testnet)
 - **DB:** Prisma / Postgres (distribution accounting)
-- **Circle:** USDC (settlement rail) + Developer-Controlled Wallets (executor signer) — see below
+- **Circle:** USDC (settlement rail) + Developer-Controlled Wallets (executor signer) + User-Controlled Wallets (recipients) + Bridge Kit + Unified Balance Kit — see below
 
 ## Circle integration
 
@@ -62,6 +62,32 @@ identically when Circle Wallets sign the transfer.
 5. Set `CUSTODY_MODE=circle`, or leave it as `custodial` and flip the signer
    live from `/admin/settlement` (paste `ADMIN_TOKEN`, click "Use Circle Wallet").
 
+### Beyond Arc: User-Controlled Wallets, Bridge Kit, Unified Balance Kit
+
+Three more Circle products are wired in, each additive to an existing flow
+rather than replacing it:
+
+- **Circle User-Controlled Wallets** — a contributor can generate a
+  PIN-secured wallet on `ARC-TESTNET` from their cabinet as an alternate
+  payout destination, alongside their Privy embedded wallet. Auth stays on
+  the Privy wallet; only the claim's transfer target changes.
+  [`lib/circleUserWallet.ts`](frontend/lib/circleUserWallet.ts),
+  [`components/CircleWalletCard.tsx`](frontend/components/CircleWalletCard.tsx).
+- **Bridge Kit (CCTPv2)** — a contributor can claim their payout bridged
+  directly to Base Sepolia instead of the usual same-chain Arc transfer,
+  picked from a dropdown in the cabinet.
+  [`lib/bridgeKit.ts`](frontend/lib/bridgeKit.ts),
+  wired into [`lib/settlement/custodial.ts`](frontend/lib/settlement/custodial.ts).
+- **Unified Balance Kit (Gateway v1)** — the treasury page can be topped up
+  from USDC already held on Base Sepolia: one deposit into Gateway, one
+  spend that mints directly on Arc, no manual bridging step.
+  [`lib/unifiedBalanceKit.ts`](frontend/lib/unifiedBalanceKit.ts),
+  [`components/UnifiedBalanceTopUpCard.tsx`](frontend/components/UnifiedBalanceTopUpCard.tsx).
+
+All three were exercised end-to-end on testnet with real fund movement, not
+just unit-level calls — see commit history for tx hashes on Arc Testnet and
+Base Sepolia.
+
 ### Circle Product Feedback
 
 **Why we chose these products:** the challenge is judged on effective use of
@@ -91,6 +117,20 @@ us add real Circle infrastructure instead of a conceptual integration.
 - Registering an entity secret writes a `recovery_file_*.dat` straight to the
   current working directory rather than returning it as data — easy to
   accidentally leave inside a git-tracked project folder.
+- Unified Balance Kit's `spend` requires the source balance to cover
+  `amount + fees`, but the amount that ends up minted on the destination
+  chain is exactly `amount` — the error message ("Available: 0.5, required:
+  0.51") doesn't make that distinction, so it initially read like a rounding
+  bug rather than "deposit slightly more than you intend to spend."
+- Gateway deposits take real wall-clock time to reach finality (~10 minutes
+  observed on Base Sepolia) before `spend` can use them — expected given
+  source-chain finality requirements, but worth flagging up front in the
+  Quick Start rather than discovering it via a `BALANCE_INSUFFICIENT_TOKEN`
+  error on the first attempt.
+- The default public Arc Testnet RPC (`rpc.testnet.arc.network`) rate-limits
+  under moderate load; we had to add `arc-testnet.drpc.org` as a fallback
+  transport for both the executor and the Bridge/Unified Balance Kit
+  adapters to get reliable reads.
 
 **Recommendations:** publish the list of currently-supported `blockchains`
 values (including `ARC-TESTNET`) directly on the Wallets quickstart page, and
