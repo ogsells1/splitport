@@ -417,9 +417,12 @@ vault'ы продолжат создаваться с уязвимым кодо�
 - [x] Добавить `totalClaimable` в `VAULT_ABI` (`frontend/lib/contract.ts`)
 - [x] Задеплоить новую фабрику: `cd contracts && npx hardhat run scripts/deployFactory.ts --network arc_testnet`
 - [x] Обновить `VAULT_FACTORY_ADDRESS` в `contracts/.env` и `frontend/.env.local`
-- [ ] Обновить `VAULT_FACTORY_ADDRESS` в Vercel (Production) — **не сделано**, прод сейчас
-      в режиме `custodial` и фабрику не использует, но перед переключением на `onchain`
-      обязательно
+- [x] Прописать `VAULT_FACTORY_ADDRESS` в Vercel (Production) — переменной там раньше
+      не было вовсе, то есть onchain-режим в проде упал бы с 503 «not configured».
+      Добавлена как `--no-sensitive`: адрес публичный, а sensitive-переменные нельзя
+      прочитать обратно и, значит, нельзя проверить
+- [ ] Сделать редеплой, чтобы переменная попала в рантайм (на сборку не влияет, пока
+      прод в режиме `custodial`)
 - [x] Проверить новый vault: `totalClaimable()` присутствует, `distribute()` от постороннего
       отклоняется
 
