@@ -140,6 +140,8 @@ const FEATURES = [
 export default function Home() {
   const { ready, authenticated, login } = usePrivy();
   const router = useRouter();
+  // Privy blocked (ad blocker / network): ready never flips, login() would no-op
+  const [authStalled, setAuthStalled] = useState(false);
 
   useEffect(() => {
     // Only auto-forward signed-in users when the app lives on this host
@@ -148,13 +150,21 @@ export default function Home() {
     }
   }, [ready, authenticated, router]);
 
+  useEffect(() => {
+    if (APP_URL || ready) return;
+    const t = setTimeout(() => setAuthStalled(true), 8000);
+    return () => clearTimeout(t);
+  }, [ready]);
+
   const openApp = () => {
     if (APP_URL) {
       window.location.href = appHref("/dashboard");
-    } else {
+    } else if (ready) {
       login();
     }
   };
+
+  const signInDisabled = !APP_URL && !ready;
 
   return (
     <main className="min-h-screen bg-[#FAFAF8] text-stone-900 antialiased">
@@ -176,11 +186,22 @@ export default function Home() {
         </nav>
         <button
           onClick={openApp}
-          className="rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-stone-700"
+          disabled={signInDisabled}
+          className="rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-stone-700 disabled:cursor-wait disabled:opacity-60"
         >
           {ready && authenticated ? "Open app" : "Sign in"}
         </button>
       </header>
+
+      {authStalled && !ready && (
+        <div className="mx-auto max-w-6xl px-6">
+          <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            Sign-in is taking unusually long to load. An ad blocker or privacy
+            extension may be blocking <code>auth.privy.io</code> — try disabling
+            it for this site or use a private window.
+          </p>
+        </div>
+      )}
 
       {/* Hero */}
       <section className="mx-auto grid max-w-6xl items-center gap-12 px-6 pb-20 pt-14 lg:grid-cols-2 lg:pt-20">
@@ -204,7 +225,8 @@ export default function Home() {
           <div className="mt-8 flex flex-wrap items-center gap-4">
             <button
               onClick={openApp}
-              className="rounded-xl bg-emerald-700 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-emerald-800"
+              disabled={signInDisabled}
+              className="rounded-xl bg-emerald-700 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-emerald-800 disabled:cursor-wait disabled:opacity-60"
             >
               Start paying
             </button>
@@ -285,7 +307,8 @@ export default function Home() {
           </p>
           <button
             onClick={openApp}
-            className="mt-8 rounded-xl bg-emerald-500 px-8 py-3 text-sm font-semibold text-stone-950 transition-colors hover:bg-emerald-400"
+            disabled={signInDisabled}
+            className="mt-8 rounded-xl bg-emerald-500 px-8 py-3 text-sm font-semibold text-stone-950 transition-colors hover:bg-emerald-400 disabled:cursor-wait disabled:opacity-60"
           >
             Open SplitPort
           </button>
