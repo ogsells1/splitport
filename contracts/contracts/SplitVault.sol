@@ -56,6 +56,14 @@ contract SplitVault is ReentrancyGuard, Ownable, Pausable {
     // pull-claim: accrued-but-not-yet-withdrawn balance per wallet
     mapping(address => uint256) public claimable;
 
+    /// @notice Сумма всех невыплаченных claimable-балансов.
+    /// @dev    Эти средства уже обещаны участникам и не подлежат распределению:
+    ///         distribute/payEach работают только со свободным остатком
+    ///         (_freeBalance). Без этого счётчика distribute() раздал бы весь
+    ///         баланс, включая начисленное через accrue(), и claim() участника
+    ///         навсегда падал бы на нехватке средств.
+    uint256 public totalClaimable;
+
     // ─────────────────────────────────────────────
     // EVENTS
     // ─────────────────────────────────────────────
@@ -239,35 +247,47 @@ contract SplitVault is ReentrancyGuard, Ownable, Pausable {
     }
 
     /**
-     * @notice Распределяет весь pending баланс между участниками.
-     *         Может вызывать owner или любой участник.
+     * @notice Свободный к распределению остаток: баланс минус уже начисленное
+     *         участникам через accrue() и ещё не забранное ими.
+     */
+    function _freeBalance() internal view returns (uint256) {
+        uint256 balance = usdcToken.balanceOf(address(this));
+        return balance > totalClaimable ? balance - totalClaimable : 0;
+    }
+
+    /**
+     * @notice Распределяет весь свободный остаток между участниками.
+     * @dev    Только owner: раздача меняет момент и пропорции выплат, а вызов
+     *         посторонним позволял бы форсировать её до смены долей
+     *         (front-run replaceContributors).
      */
     function distribute()
         external
+        onlyOwner
         onlyInitialized
         whenNotPaused
         nonReentrant
     {
-        uint256 pending = usdcToken.balanceOf(address(this));
+        uint256 pending = _freeBalance();
         if (pending == 0) revert NothingToDistribute();
         _distribute(pending);
     }
 
     /**
-     * @notice Распределяет указанную сумму (<= pending баланса) между участниками,
+     * @notice Распределяет указанную сумму (<= свободного остатка) между участниками,
      *         остаток остаётся в vault для последующего distribute().
-     *         Может вызывать owner или любой участник.
+     * @dev    Только owner — см. distribute().
      * @param _amount  Сумма USDC (6 decimals) для распределения
      */
     function distributePartial(uint256 _amount)
         external
+        onlyOwner
         onlyInitialized
         whenNotPaused
         nonReentrant
     {
         if (_amount == 0) revert ZeroAmount();
-        uint256 pending = usdcToken.balanceOf(address(this));
-        if (_amount > pending) revert InsufficientBalance();
+        if (_amount > _freeBalance()) revert InsufficientBalance();
         _distribute(_amount);
     }
 
@@ -321,7 +341,8 @@ contract SplitVault is ReentrancyGuard, Ownable, Pausable {
 
         uint256 total;
         for (uint256 i = 0; i < _amounts.length; i++) total += _amounts[i];
-        if (usdcToken.balanceOf(address(this)) < total) revert InsufficientBalance();
+        // Свободный остаток: нельзя платить из средств, обещанных через accrue().
+        if (_freeBalance() < total) revert InsufficientBalance();
 
         for (uint256 i = 0; i < _recipients.length; i++) {
             if (_recipients[i] == address(0)) revert InvalidAddress();
@@ -345,7 +366,9 @@ contract SplitVault is ReentrancyGuard, Ownable, Pausable {
 
         uint256 total;
         for (uint256 i = 0; i < _amounts.length; i++) total += _amounts[i];
-        if (usdcToken.balanceOf(address(this)) < total) revert InsufficientBalance();
+        // Обеспеченность считаем с учётом уже зарезервированного, иначе два
+        // последовательных accrue() пообещали бы одни и те же средства дважды.
+        if (usdcToken.balanceOf(address(this)) < totalClaimable + total) revert InsufficientBalance();
 
         for (uint256 i = 0; i < _recipients.length; i++) {
             if (_recipients[i] == address(0)) revert InvalidAddress();
@@ -353,6 +376,7 @@ contract SplitVault is ReentrancyGuard, Ownable, Pausable {
             claimable[_recipients[i]] += _amounts[i];
             emit Accrued(_recipients[i], _amounts[i]);
         }
+        totalClaimable += total;
     }
 
     /**
@@ -363,6 +387,7 @@ contract SplitVault is ReentrancyGuard, Ownable, Pausable {
         uint256 amount = claimable[msg.sender];
         if (amount == 0) revert NothingToClaim();
         claimable[msg.sender] = 0;
+        totalClaimable -= amount; // резерв освобождён — средства покидают vault
         totalDistributed += amount;
         usdcToken.safeTransfer(msg.sender, amount);
         emit Claimed(msg.sender, amount);
@@ -378,6 +403,7 @@ contract SplitVault is ReentrancyGuard, Ownable, Pausable {
         uint256 amount = claimable[_wallet];
         if (amount == 0) revert NothingToClaim();
         claimable[_wallet] = 0;
+        totalClaimable -= amount; // резерв освобождён — средства покидают vault
         totalDistributed += amount;
         usdcToken.safeTransfer(_wallet, amount);
         emit Claimed(_wallet, amount);
@@ -394,7 +420,7 @@ contract SplitVault is ReentrancyGuard, Ownable, Pausable {
             usdcToken:        address(usdcToken),
             totalDeposited:   totalDeposited,
             totalDistributed: totalDistributed,
-            pendingBalance:   initialized ? usdcToken.balanceOf(address(this)) : 0,
+            pendingBalance:   initialized ? _freeBalance() : 0,
             initialized:      initialized,
             paused:           paused(),
             contributorCount: contributors.length
@@ -417,10 +443,10 @@ contract SplitVault is ReentrancyGuard, Ownable, Pausable {
         return contributors[idx - 1];
     }
 
-    /// @notice Возвращает pending баланс vault
+    /// @notice Свободный к распределению остаток (без начисленного через accrue)
     function pendingBalance() external view returns (uint256) {
         if (!initialized) return 0;
-        return usdcToken.balanceOf(address(this));
+        return _freeBalance();
     }
 
     /// @notice Сколько получит участник при следующем distribute()
@@ -428,7 +454,7 @@ contract SplitVault is ReentrancyGuard, Ownable, Pausable {
         uint256 idx = contributorIndex[_wallet];
         if (idx == 0) return 0;
 
-        uint256 pending = usdcToken.balanceOf(address(this));
+        uint256 pending = _freeBalance();
         if (pending == 0) return 0;
 
         return (pending * contributors[idx - 1].percentage) / 10000;

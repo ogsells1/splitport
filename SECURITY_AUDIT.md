@@ -23,14 +23,15 @@
 |---|---------|-------------|------|--------|
 | 1 | Утёкший executor-ключ не ротирован | 🔴 Критично | Секреты | [ ] |
 | 2 | Double-spend через гонку в claim | 🔴 Критично | Backend | [x] **Исправлено** |
-| 3 | `accrue()` не резервирует средства в vault | 🔴 Критично | Контракт | [ ] |
-| 4 | `distribute()` вызывается кем угодно | 🟠 Важно | Контракт | [ ] |
+| 3 | `accrue()` не резервирует средства в vault | 🔴 Критично | Контракт | [x] **Исправлено**, нужен редеплой |
+| 4 | `distribute()` вызывается кем угодно | 🟠 Важно | Контракт | [x] **Исправлено**, нужен редеплой |
 | 5 | Next.js 14.2.5 — critical advisory, 87 уязвимостей | 🟠 Важно | Зависимости | [ ] |
 | 6 | Админ-гейт: слабый токен + режим в памяти инстанции | 🟠 Важно | Backend | [ ] |
 | 7 | Нет rate limiting | 🟡 Стоит | Backend | [ ] |
 | 8 | `emergencyWithdraw` забирает claimable-средства | 🟡 Документировать | Контракт | [ ] |
 | 9 | Нет security-заголовков | 🟡 Стоит | Конфиг | [ ] |
 | 10 | `circle-secrets/` открытым текстом на диске | 🟡 Стоит | Секреты | [ ] |
+| 11 | Executor не owner vault в onchain-режиме | 🟠 Важно | Контракт/Backend | [ ] |
 
 ### Что уже сделано хорошо
 
@@ -230,7 +231,23 @@ catch (err) {
 
 ---
 
-## 🔴 3. `accrue()` не резервирует средства в vault
+## ✅ 3. `accrue()` не резервирует средства в vault — ИСПРАВЛЕНО (нужен редеплой)
+
+> **Статус:** код исправлен 2026-08-04, 51 тест проходит. **В сети изменения ещё нет** —
+> требуется редеплой фабрики, см. «Редеплой» ниже.
+>
+> Введён счётчик `totalClaimable` и `_freeBalance()`; распределять можно только свободный
+> остаток. Затронуты `distribute`, `distributePartial`, `payEach`, а также view-функции
+> `pendingBalance`, `previewShare` и `getProjectInfo().pendingBalance` — иначе UI показывал бы
+> завышенный доступный остаток. `claim`/`claimFor` освобождают резерв.
+>
+> Новые тесты (10): резерв переживает `distribute()`, повторный `accrue` сверх свободного
+> остатка отклоняется, `payEach` и `distributePartial` не могут потратить зарезервированное,
+> view-функции исключают резерв.
+
+<details>
+<summary>Исходное описание проблемы и план фикса</summary>
+
 
 **Где:** [`contracts/contracts/SplitVault.sol:340-356`](contracts/contracts/SplitVault.sol) (`accrue`),
 [`:245-304`](contracts/contracts/SplitVault.sol) (`distribute` / `_distribute`)
@@ -314,14 +331,30 @@ function _freeBalance() internal view returns (uint256) {
 
 ### Проверка
 
-- [ ] Тест: accrue(100) → distribute() не трогает эти 100 → claim() успешен
-- [ ] Тест: accrue на сумму больше свободного баланса → revert `InsufficientBalance`
-- [ ] Тест: claim() уменьшает `totalClaimable`, следующий distribute() видит освободившееся
-- [ ] `npx hardhat test` — все 37 существующих тестов по-прежнему проходят
+- [x] Тест: accrue(100) → distribute() не трогает эти 100 → claim() успешен
+- [x] Тест: accrue на сумму больше свободного баланса → revert `InsufficientBalance`
+- [x] Тест: claim() уменьшает `totalClaimable`, следующий distribute() видит освободившееся
+- [x] `npx hardhat test` — 51 тест (37 прежних + 14 новых) проходит
+
+</details>
 
 ---
 
-## 🟠 4. `distribute()` и `distributePartial()` вызываются кем угодно
+## ✅ 4. `distribute()` и `distributePartial()` вызываются кем угодно — ИСПРАВЛЕНО (нужен редеплой)
+
+> **Статус:** код исправлен 2026-08-04. Выбрана политика **только owner** (решение владельца
+> проекта от 2026-08-04). Комментарии в контракте приведены в соответствие с кодом.
+>
+> Бэкенд не затронут: `lib/settlement/vault.ts` вызывает только `payEach`, `accrue` и
+> `claimFor`, а `distribute()` не использует. Существующие тесты вызывали `distribute()`
+> от owner, поэтому не сломались.
+>
+> Новые тесты (4): посторонний и участник получают `OwnableUnauthorizedAccount` на
+> `distribute()` и `distributePartial()`, owner по-прежнему может.
+
+<details>
+<summary>Исходное описание проблемы и план фикса</summary>
+
 
 **Где:** [`contracts/contracts/SplitVault.sol:245`](contracts/contracts/SplitVault.sol),
 [`:262`](contracts/contracts/SplitVault.sol)
@@ -361,9 +394,58 @@ function distributePartial(uint256 _amount) external onlyOwnerOrContributor only
 Если по продуктовой логике раздачу должен инициировать только owner/кипер — поставить
 `onlyOwner` и поправить комментарий.
 
-- [ ] Выбрать политику, применить модификатор
-- [ ] Обновить комментарии, чтобы они соответствовали коду
-- [ ] Тест: посторонний адрес получает revert
+- [x] Выбрать политику, применить модификатор — выбран `onlyOwner`
+- [x] Обновить комментарии, чтобы они соответствовали коду
+- [x] Тест: посторонний адрес получает revert
+
+</details>
+
+---
+
+## 🚧 Редеплой контрактов (нужен для находок №3 и №4)
+
+Исправления №3 и №4 живут в `SplitVault.sol`, но **в сети их пока нет**. Новые проекты
+создаются вызовом `createVault()` у фабрики по адресу `VAULT_FACTORY_ADDRESS`, а фабрика
+разворачивает `SplitVault` из **вшитого в неё байткода**. Пока фабрика старая, новые
+vault'ы продолжат создаваться с уязвимым кодом.
+
+Что нужно сделать:
+
+- [x] Перекомпилировать контракты, синхронизировать артефакты во `frontend/lib/`
+      (`SplitVaultArtifact.json`, `SplitVaultFactoryArtifact.json` — из них берётся
+      `FACTORY_ABI`/`FACTORY_BYTECODE`)
+- [x] Добавить `totalClaimable` в `VAULT_ABI` (`frontend/lib/contract.ts`)
+- [ ] Задеплоить новую фабрику: `cd contracts && npx hardhat run scripts/deployFactory.ts --network arcTestnet`
+- [ ] Обновить `VAULT_FACTORY_ADDRESS` в Vercel (Production) и в `frontend/.env.local`
+- [ ] Проверить: создать тестовый проект в onchain-режиме, убедиться, что у нового vault
+      есть `totalClaimable()` и что `distribute()` от постороннего отклоняется
+
+> **Существующие vault'ы останутся на старом коде** — обновить их нельзя, контракты
+> неизменяемы. Если на показе будет демонстрироваться уже созданный проект, он всё ещё
+> уязвим к №3 и №4. Для демо стоит создать проект заново после редеплоя.
+
+---
+
+## 🟠 11. В onchain-режиме executor не является owner'ом vault (найдено при починке №3/№4)
+
+**Где:** [`frontend/app/api/project/create/route.ts:99-101`](frontend/app/api/project/create/route.ts),
+[`frontend/lib/settlement/vault.ts`](frontend/lib/settlement/vault.ts)
+**Серьёзность:** важно (только для onchain-режима; текущий демо-режим — `custodial`)
+
+При создании проекта владельцем vault назначается **кошелёк пользователя**
+(`ownerWallet = owner?.wallet ?? executor.account.address`). При этом расчёты выполняет
+executor: `lib/settlement/vault.ts` вызывает `payEach()` и `accrue()`, а обе функции —
+`onlyOwner`. Если у пользователя привязан кошелёк (обычный случай), вызовы executor'а
+будут отклоняться с `OwnableUnauthorizedAccount`.
+
+Работает это сейчас только потому, что fallback подставляет executor, когда у пользователя
+нет привязанного кошелька. `claimFor()` не затронут — его может вызвать кто угодно.
+
+Найдено при работе над №4 и не входило в её объём, поэтому не исправлялось.
+
+- [ ] Определиться с моделью: либо owner vault = executor (кипер), а пользователь получает
+      отдельную роль, либо ввести роль keeper с доступом к `payEach`/`accrue` отдельно от owner
+- [ ] Проверить onchain-режим end-to-end до того, как показывать его как рабочий
 
 ---
 

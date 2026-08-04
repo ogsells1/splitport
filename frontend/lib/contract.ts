@@ -54,6 +54,15 @@ export const VAULT_ABI = [
     ],
   },
   {
+    // Reserved for participants via accrue(), excluded from pendingBalance and
+    // from anything distribute()/payEach() may spend.
+    name: "totalClaimable",
+    type: "function",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "uint256" }],
+  },
+  {
     name: "getContributors",
     type: "function",
     stateMutability: "view",

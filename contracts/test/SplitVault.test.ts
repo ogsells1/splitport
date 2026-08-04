@@ -277,6 +277,127 @@ describe("SplitVault", function () {
     });
   });
 
+  // ── Резервирование accrue: средства, обещанные участнику, не раздаются ──
+  //
+  // До фикса distribute() раздавал весь баланс vault, включая начисленное через
+  // accrue(). Участник оставался с записью в claimable и без денег: claim()
+  // падал на нехватке баланса навсегда.
+
+  describe("totalClaimable (резерв под accrue)", function () {
+    it("accrue увеличивает totalClaimable", async function () {
+      const { vault, artist } = await loadFixture(fundedFixture);
+      const amount = ethers.parseUnits("400", 6);
+      await vault.accrue([artist.address], [amount]);
+      expect(await vault.totalClaimable()).to.equal(amount);
+    });
+
+    it("distribute() не трогает начисленное — claim() после него проходит", async function () {
+      const { vault, usdc, artist } = await loadFixture(fundedFixture);
+      const reserved = ethers.parseUnits("400", 6);
+      await vault.accrue([artist.address], [reserved]);
+
+      await vault.distribute();
+
+      // Резерв остался в vault и доступен участнику.
+      const before = await usdc.balanceOf(artist.address);
+      await vault.connect(artist).claim();
+      expect((await usdc.balanceOf(artist.address)) - before).to.equal(reserved);
+    });
+
+    it("distribute() раздаёт только свободный остаток", async function () {
+      const { vault, usdc, artist, vaultAddress } = await loadFixture(fundedFixture);
+      const reserved = ethers.parseUnits("400", 6);
+      await vault.accrue([artist.address], [reserved]);
+
+      // 1000 в vault, 400 зарезервировано → раздать можно 600.
+      await vault.distribute();
+      expect(await usdc.balanceOf(vaultAddress)).to.equal(reserved);
+    });
+
+    it("claim() освобождает резерв — следующий distribute() видит остаток", async function () {
+      const { vault, artist } = await loadFixture(fundedFixture);
+      const reserved = ethers.parseUnits("400", 6);
+      await vault.accrue([artist.address], [reserved]);
+      await vault.connect(artist).claim();
+      expect(await vault.totalClaimable()).to.equal(0);
+    });
+
+    it("claimFor() тоже освобождает резерв", async function () {
+      const { vault, artist, stranger } = await loadFixture(fundedFixture);
+      const reserved = ethers.parseUnits("400", 6);
+      await vault.accrue([artist.address], [reserved]);
+      await vault.connect(stranger).claimFor(artist.address);
+      expect(await vault.totalClaimable()).to.equal(0);
+    });
+
+    it("второй accrue сверх свободного остатка revert", async function () {
+      const { vault, artist, producer } = await loadFixture(fundedFixture);
+      // 1000 в vault: первый accrue берёт 700, на второй свободно только 300.
+      await vault.accrue([artist.address], [ethers.parseUnits("700", 6)]);
+      await expect(vault.accrue([producer.address], [ethers.parseUnits("400", 6)]))
+        .to.be.revertedWithCustomError(vault, "InsufficientBalance");
+    });
+
+    it("payEach не может потратить зарезервированное", async function () {
+      const { vault, artist, producer } = await loadFixture(fundedFixture);
+      await vault.accrue([artist.address], [ethers.parseUnits("700", 6)]);
+      await expect(vault.payEach([producer.address], [ethers.parseUnits("400", 6)]))
+        .to.be.revertedWithCustomError(vault, "InsufficientBalance");
+    });
+
+    it("distributePartial сверх свободного остатка revert", async function () {
+      const { vault, artist } = await loadFixture(fundedFixture);
+      await vault.accrue([artist.address], [ethers.parseUnits("700", 6)]);
+      await expect(vault.distributePartial(ethers.parseUnits("400", 6)))
+        .to.be.revertedWithCustomError(vault, "InsufficientBalance");
+    });
+
+    it("pendingBalance() и previewShare() исключают резерв", async function () {
+      const { vault, artist } = await loadFixture(fundedFixture);
+      await vault.accrue([artist.address], [ethers.parseUnits("400", 6)]);
+
+      expect(await vault.pendingBalance()).to.equal(ethers.parseUnits("600", 6));
+      // artist держит 50% → половина от свободных 600.
+      expect(await vault.previewShare(artist.address)).to.equal(ethers.parseUnits("300", 6));
+      const info = await vault.getProjectInfo();
+      expect(info.pendingBalance).to.equal(ethers.parseUnits("600", 6));
+    });
+
+    it("distribute() revert, когда свободного остатка нет", async function () {
+      const { vault, artist } = await loadFixture(fundedFixture);
+      await vault.accrue([artist.address], [ethers.parseUnits("1000", 6)]);
+      await expect(vault.distribute())
+        .to.be.revertedWithCustomError(vault, "NothingToDistribute");
+    });
+  });
+
+  // ── Доступ к distribute: только owner ──────────────────────────────────
+
+  describe("distribute() — только owner", function () {
+    it("посторонний не может вызвать distribute()", async function () {
+      const { vault, stranger } = await loadFixture(fundedFixture);
+      await expect(vault.connect(stranger).distribute())
+        .to.be.revertedWithCustomError(vault, "OwnableUnauthorizedAccount");
+    });
+
+    it("участник не может вызвать distribute()", async function () {
+      const { vault, artist } = await loadFixture(fundedFixture);
+      await expect(vault.connect(artist).distribute())
+        .to.be.revertedWithCustomError(vault, "OwnableUnauthorizedAccount");
+    });
+
+    it("посторонний не может вызвать distributePartial()", async function () {
+      const { vault, stranger } = await loadFixture(fundedFixture);
+      await expect(vault.connect(stranger).distributePartial(ethers.parseUnits("100", 6)))
+        .to.be.revertedWithCustomError(vault, "OwnableUnauthorizedAccount");
+    });
+
+    it("owner по-прежнему может", async function () {
+      const { vault, owner } = await loadFixture(fundedFixture);
+      await expect(vault.connect(owner).distribute()).to.emit(vault, "RevenueDistributed");
+    });
+  });
+
   // ── Pause / EmergencyWithdraw ──────────────────────────────────────────
 
   describe("pause / emergencyWithdraw", function () {
