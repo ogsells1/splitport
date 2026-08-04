@@ -22,6 +22,7 @@ import {
   type LockedPayout,
   type LockedShare,
 } from "@/lib/claimLock";
+import { enforceRateLimit, RateLimitError } from "@/lib/rateLimit";
 import { SUPPORTED_BRIDGE_CHAINS, type BridgeDestination } from "@/lib/bridgeKit";
 
 function parseDestinationChain(value: unknown): BridgeDestination | undefined {
@@ -39,11 +40,26 @@ export async function POST(request: Request) {
     }
     const destinationChain = parseDestinationChain(body.destinationChain);
 
+    let privyId: string;
     try {
-      await requireWallet(request, wallet);
+      privyId = await requireWallet(request, wallet);
     } catch (e) {
       const { error, status } = authErrorResponse(e);
       return NextResponse.json({ error }, { status });
+    }
+
+    // Counted per account, after authentication: a claim can move funds and
+    // burns executor gas, so a signed-in caller still needs a ceiling.
+    try {
+      await enforceRateLimit("claim", privyId);
+    } catch (e) {
+      if (e instanceof RateLimitError) {
+        return NextResponse.json(
+          { error: e.message },
+          { status: e.status, headers: { "Retry-After": String(e.retryAfterSeconds) } }
+        );
+      }
+      throw e;
     }
 
     const settlement = await getSettlement();

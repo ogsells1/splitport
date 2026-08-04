@@ -9,12 +9,28 @@ import { prisma } from "@/lib/prisma";
 import { getExecutor } from "@/lib/executor";
 import { VAULT_ABI } from "@/lib/contract";
 import { requireUser, requireWallet, authErrorResponse } from "@/lib/auth";
+import { enforceRateLimit, RateLimitError, callerIp } from "@/lib/rateLimit";
 
 export async function GET(
   _request: Request,
   { params }: { params: { token: string } }
 ) {
   try {
+    // The one public, unauthenticated route here, so the bucket is the caller's
+    // IP. Invite tokens carry 24 bytes of entropy and are not guessable, but a
+    // ceiling keeps enumeration attempts from costing us DB traffic.
+    try {
+      await enforceRateLimit("inviteLookup", callerIp(_request));
+    } catch (e) {
+      if (e instanceof RateLimitError) {
+        return NextResponse.json(
+          { error: e.message },
+          { status: e.status, headers: { "Retry-After": String(e.retryAfterSeconds) } }
+        );
+      }
+      throw e;
+    }
+
     const { token } = params;
 
     const contributor = await prisma.contributor.findUnique({

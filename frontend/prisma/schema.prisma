@@ -328,3 +328,17 @@ model AppSetting {
 
   @@map("app_settings")
 }
+
+// Fixed-window request counters. In the database rather than in memory for the
+// same reason as AppSetting: a per-instance counter on Vercel would let a caller
+// multiply their quota by however many instances happen to be warm.
+model RateLimit {
+  id          String   @id @default(cuid())
+  key         String // "<scope>:<caller>", e.g. "claim:did:privy:abc123"
+  windowStart DateTime // bucket boundary; rows older than a day are pruned by cron
+  count       Int      @default(0)
+
+  @@unique([key, windowStart])
+  @@index([windowStart])
+  @@map("rate_limits")
+}

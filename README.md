@@ -137,6 +137,40 @@ values (including `ARC-TESTNET`) directly on the Wallets quickstart page, and
 add a `getTokenId(tokenAddress, blockchain)` convenience method so `walletId`-based
 transfers don't require a manual balance lookup first.
 
+## Trust assumptions
+
+SplitPort is a testnet demo, and the honest description of who can do what
+matters more than a claim of being trustless. Two custody models exist in the
+codebase; the deployed demo runs the first.
+
+**Custodial mode (`CUSTODY_MODE` unset — the default, and what the demo shows).**
+Balances are database records, and the platform's executor wallet holds and
+sends the actual USDC. A participant's claim is a request to that wallet, not a
+withdrawal they can force. Whoever controls `EXECUTOR_PRIVATE_KEY` controls the
+funds. This is the trade-off that makes onboarding via Google possible with no
+wallet and no gas — it is not non-custodial, and we don't describe it as such.
+
+**Vault mode (`CUSTODY_MODE=onchain`).** Funds sit in a per-project `SplitVault`.
+Amounts credited with `accrue()` are reserved by `totalClaimable` and cannot be
+paid out by `distribute()` or `payEach()`, so a participant's accrued balance
+survives any later distribution. `claimFor()` is callable by anyone but always
+sends to the participant's own address, so the platform can settle a claim
+without being able to redirect it.
+
+Even so, the vault owner retains two powers worth stating plainly:
+
+- **`emergencyWithdraw` drains everything, including reserved balances.** It
+  requires the contract to be paused and is owner-only, but it does not respect
+  `totalClaimable`. An owner can pause and withdraw funds already accrued to
+  participants. Making it withdraw only the free balance is a one-line change we
+  have deliberately not made yet — it needs a decision about whether recovery or
+  participant protection wins when the two conflict.
+- **`replaceContributors` rewrites the split** for anything not yet distributed.
+
+Neither vault mode nor the custodial rails have had an external audit. The
+contracts have 51 unit tests; that is not a substitute. Known issues and their
+status are tracked in [SECURITY_AUDIT.md](SECURITY_AUDIT.md).
+
 ## Run locally
 
 ```bash

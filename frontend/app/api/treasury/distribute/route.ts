@@ -9,6 +9,7 @@ import { NextResponse } from "next/server";
 import { parseUnits } from "viem";
 import { runDistribution, DistributionError } from "@/lib/distribute";
 import { requireUser, authErrorResponse } from "@/lib/auth";
+import { enforceRateLimit, RateLimitError } from "@/lib/rateLimit";
 
 export async function POST(request: Request) {
   let ownerPrivyId: string;
@@ -17,6 +18,18 @@ export async function POST(request: Request) {
   } catch (e) {
     const { error, status } = authErrorResponse(e);
     return NextResponse.json({ error }, { status });
+  }
+
+  try {
+    await enforceRateLimit("distribute", ownerPrivyId);
+  } catch (e) {
+    if (e instanceof RateLimitError) {
+      return NextResponse.json(
+        { error: e.message },
+        { status: e.status, headers: { "Retry-After": String(e.retryAfterSeconds) } }
+      );
+    }
+    throw e;
   }
 
   try {

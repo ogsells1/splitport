@@ -12,6 +12,7 @@ import { prisma } from "@/lib/prisma";
 import { runDistribution, DistributionError } from "@/lib/distribute";
 import { advanceFrom, type Frequency } from "@/lib/schedule";
 import { isCronAuthorized } from "@/lib/auth";
+import { pruneRateLimits } from "@/lib/rateLimit";
 
 export async function GET(request: NextRequest) {
   // Vercel Cron sends CRON_SECRET as a Bearer token. In production a missing
@@ -122,7 +123,16 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ ran: results.length, results });
+    // Housekeeping: rate-limit rows are only meaningful inside their window.
+    // Failing to prune must not fail the payout run, so it is best-effort.
+    let prunedRateLimits = 0;
+    try {
+      prunedRateLimits = await pruneRateLimits();
+    } catch (e) {
+      console.error("[schedule/run] rate-limit prune failed", e);
+    }
+
+    return NextResponse.json({ ran: results.length, results, prunedRateLimits });
   } catch (error: any) {
     console.error("[GET /api/treasury/schedule/run]", error);
     return NextResponse.json({ error: error?.message ?? "Internal server error" }, { status: 500 });
