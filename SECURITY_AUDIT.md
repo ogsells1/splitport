@@ -415,10 +415,35 @@ vault'ы продолжат создаваться с уязвимым кодо�
       (`SplitVaultArtifact.json`, `SplitVaultFactoryArtifact.json` — из них берётся
       `FACTORY_ABI`/`FACTORY_BYTECODE`)
 - [x] Добавить `totalClaimable` в `VAULT_ABI` (`frontend/lib/contract.ts`)
-- [ ] Задеплоить новую фабрику: `cd contracts && npx hardhat run scripts/deployFactory.ts --network arcTestnet`
-- [ ] Обновить `VAULT_FACTORY_ADDRESS` в Vercel (Production) и в `frontend/.env.local`
-- [ ] Проверить: создать тестовый проект в onchain-режиме, убедиться, что у нового vault
-      есть `totalClaimable()` и что `distribute()` от постороннего отклоняется
+- [x] Задеплоить новую фабрику: `cd contracts && npx hardhat run scripts/deployFactory.ts --network arc_testnet`
+- [x] Обновить `VAULT_FACTORY_ADDRESS` в `contracts/.env` и `frontend/.env.local`
+- [ ] Обновить `VAULT_FACTORY_ADDRESS` в Vercel (Production) — **не сделано**, прод сейчас
+      в режиме `custodial` и фабрику не использует, но перед переключением на `onchain`
+      обязательно
+- [x] Проверить новый vault: `totalClaimable()` присутствует, `distribute()` от постороннего
+      отклоняется
+
+### Результат деплоя (2026-08-04)
+
+| | |
+|---|---|
+| Новая фабрика | `0xaD1dEdce0E042Fe92FF94D078dA8fc6321F810A2` |
+| Прежняя фабрика | `0xd2ab7256CA372361629cA9268dB83a5B3C438a42` (уязвима, не использовать) |
+| Деплоер | `0xc35D19Ba49177710265f90aAE2ACcEd3bEbB8645` |
+| Сеть | Arc Testnet (5042002) |
+
+Проверка развёрнутого кода (пробный vault `0xdCA0…d4f2`):
+
+- `totalClaimable()` присутствует в байткоде → фикс №3 в сети
+- `distribute()` от постороннего → `OwnableUnauthorizedAccount` → фикс №4 в сети
+- контроль: тот же вызов от owner → `NotInitialized`, то есть проверка прав пройдена
+  и остановка произошла дальше по коду (реверт не сплошной)
+
+> **Фабрика развёрнута скомпрометированным ключом** (находка №1, `0xc35D…8645` — тот самый
+> ключ из публичного репозитория). Для самой фабрики это не создаёт риска: у неё нет владельца
+> и привилегированных функций, `createVault()` доступен всем по определению. Но на этом
+> кошельке лежит ~27 USDC, доступных любому, у кого есть утёкший ключ. Ротация по-прежнему
+> обязательна.
 
 > **Существующие vault'ы останутся на старом коде** — обновить их нельзя, контракты
 > неизменяемы. Если на показе будет демонстрироваться уже созданный проект, он всё ещё
