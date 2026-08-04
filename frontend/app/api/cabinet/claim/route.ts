@@ -46,7 +46,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error }, { status });
     }
 
-    const settlement = getSettlement();
+    const settlement = await getSettlement();
 
     if (settlement.mode === "onchain") {
       return await claimOnchain(wallet);
@@ -113,7 +113,7 @@ async function settleOnchainLocked(
   const vaultTxHashes: string[] = [];
 
   if (byVault.size > 0) {
-    const settlement = getSettlement();
+    const settlement = await getSettlement();
     for (const [contractAddress, payouts] of byVault) {
       const { txHash, gross } = await settlement.settleClaim(wallet, contractAddress);
       vaultTxHashes.push(txHash);

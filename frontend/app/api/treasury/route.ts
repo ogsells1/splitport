@@ -42,7 +42,7 @@ export async function GET(request: Request) {
     let balance: bigint;
     if (process.env.CUSTODY_MODE === "onchain") {
       // Sum on-chain USDC balances of all vault projects owned by this user.
-      const settlement = getSettlement();
+      const settlement = await getSettlement();
       const projects = await prisma.project.findMany({
         where: { ownerId: user.id },
         select: { contractAddress: true },

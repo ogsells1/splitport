@@ -127,7 +127,7 @@ export async function runDistribution(opts: {
     contributorIds,
   });
 
-  const settlement = getSettlement();
+  const settlement = await getSettlement();
 
   // Treasury balance: custodial = DB sum; vault = on-chain vault balance.
   const available = await settlement.availableBalance(project.owner.id, project.contractAddress);

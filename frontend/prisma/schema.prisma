@@ -316,3 +316,15 @@ enum PayoutStatus {
   PROCESSING // a claim run owns this row and its transfer is in flight
   CLAIMED
 }
+
+// Small key/value store for runtime settings that must be shared across
+// serverless instances. Module-level variables are per-instance on Vercel, so
+// anything an admin toggles at runtime has to live here to be seen by every
+// request. Currently holds the settlement-mode override.
+model AppSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@map("app_settings")
+}
