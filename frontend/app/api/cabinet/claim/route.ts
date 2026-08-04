@@ -15,6 +15,13 @@ import { getExecutor } from "@/lib/executor";
 import { USDC_ADDRESS, USDC_ABI } from "@/lib/contract";
 import { claimableNow } from "@/lib/stream";
 import { requireWallet, authErrorResponse } from "@/lib/auth";
+import {
+  acquireClaimLock,
+  releaseClaimLock,
+  CLEAR_LOCK,
+  type LockedPayout,
+  type LockedShare,
+} from "@/lib/claimLock";
 import { SUPPORTED_BRIDGE_CHAINS, type BridgeDestination } from "@/lib/bridgeKit";
 
 function parseDestinationChain(value: unknown): BridgeDestination | undefined {
@@ -74,14 +81,25 @@ export async function POST(request: Request) {
 
 async function claimOnchain(wallet: string) {
   const walletLc = wallet.toLowerCase();
+
+  // Same guard as the custodial path: own the rows before moving any funds, so a
+  // parallel claim can't settle the same debt twice.
+  const { lockId, payouts, shares } = await acquireClaimLock(walletLc);
+  try {
+    return await settleOnchainLocked(wallet, payouts, shares);
+  } finally {
+    await releaseClaimLock(lockId);
+  }
+}
+
+async function settleOnchainLocked(
+  wallet: string,
+  pendingPayouts: LockedPayout[],
+  shares: LockedShare[]
+) {
   const now = new Date();
 
   // ── Part 1: vault payouts (on-chain claimFor per vault) ─────────────────────
-  const pendingPayouts = await prisma.payout.findMany({
-    where: { wallet: walletLc, status: "PENDING" },
-    include: { project: { select: { contractAddress: true } } },
-  });
-
   const byVault = new Map<string, typeof pendingPayouts>();
   for (const p of pendingPayouts) {
     const addr = p.project.contractAddress;
@@ -106,7 +124,7 @@ async function claimOnchain(wallet: string) {
         payouts.map((p) =>
           prisma.payout.update({
             where: { id: p.id },
-            data: { status: "CLAIMED", txHash, claimedAt, netAmount: p.amount, feeAmount: 0n },
+            data: { status: "CLAIMED", txHash, claimedAt, netAmount: p.amount, feeAmount: 0n, ...CLEAR_LOCK },
           })
         )
       );
@@ -114,10 +132,6 @@ async function claimOnchain(wallet: string) {
   }
 
   // ── Part 2: stream accruals (custodial fallback - streams deferred to Phase 4+) ──
-  const shares = await prisma.streamShare.findMany({
-    where: { wallet: walletLc },
-    include: { stream: true },
-  });
   const streamClaims = shares
     .map((sh) => ({ share: sh, amount: claimableNow(sh, sh.stream, now) }))
     .filter((c) => c.amount > 0n);
@@ -177,7 +191,7 @@ async function claimOnchain(wallet: string) {
               const feeShare = streamGross > 0n ? (fee * c.amount) / streamGross : 0n;
               await tx.streamShare.update({
                 where: { id: c.share.id },
-                data: { claimedAmount: c.share.claimedAmount + c.amount },
+                data: { claimedAmount: c.share.claimedAmount + c.amount, ...CLEAR_LOCK },
               });
               await tx.streamClaim.create({
                 data: {

@@ -6,6 +6,13 @@ import { getAvailableBalance } from "@/lib/treasuryBalance";
 import { claimableNow } from "@/lib/stream";
 import { resolvePayoutAddress } from "./payoutDestination";
 import { bridgeUsdcFromArc, type BridgeDestination } from "@/lib/bridgeKit";
+import {
+  acquireClaimLock,
+  releaseClaimLock,
+  CLEAR_LOCK,
+  type LockedPayout,
+  type LockedShare,
+} from "@/lib/claimLock";
 import type { SettlementProvider, ShareLine } from "./types";
 
 export class CustodialSettlement implements SettlementProvider {
@@ -56,13 +63,33 @@ export class CustodialSettlement implements SettlementProvider {
 
     const walletLc = wallet.toLowerCase();
     const now = new Date();
-    const [pending, shares] = await Promise.all([
-      prisma.payout.findMany({ where: { wallet: walletLc, status: "PENDING" } }),
-      prisma.streamShare.findMany({
-        where: { wallet: walletLc },
-        include: { stream: true },
-      }),
-    ]);
+
+    // Take the rows before transferring: a parallel claim must not settle the
+    // same debt a second time. Released in the finally below.
+    const { lockId, payouts: pending, shares } = await acquireClaimLock(walletLc);
+    try {
+      return await this.settleLocked(
+        { wallet, walletLc, now, pending, shares, destinationChain },
+        executor
+      );
+    } finally {
+      await releaseClaimLock(lockId);
+    }
+  }
+
+  /** Settles the rows a claim run owns. Callers hold the claim lock. */
+  private async settleLocked(
+    ctx: {
+      wallet: string;
+      walletLc: string;
+      now: Date;
+      pending: LockedPayout[];
+      shares: LockedShare[];
+      destinationChain?: BridgeDestination;
+    },
+    executor: NonNullable<ReturnType<typeof getExecutor>>
+  ): Promise<{ txHash: string; gross: bigint; fee: bigint; net: bigint }> {
+    const { wallet, now, pending, shares, destinationChain } = ctx;
 
     const streamClaims = shares
       .map((sh) => ({ share: sh, amount: claimableNow(sh, sh.stream, now) }))
@@ -71,7 +98,11 @@ export class CustodialSettlement implements SettlementProvider {
     const grossPayouts = pending.reduce((s, p) => s + p.amount, 0n);
     const grossStreams = streamClaims.reduce((s, c) => s + c.amount, 0n);
     const totalOwed = grossPayouts + grossStreams;
-    if (totalOwed === 0n) throw new Error("Nothing to claim");
+    // Also the path a losing parallel claim takes: it won no rows, so it owes
+    // nothing and must not transfer.
+    if (totalOwed === 0n) {
+      throw Object.assign(new Error("Nothing to claim"), { status: 400 });
+    }
 
     const { walletClient, publicClient, account } = executor;
     const usdc = getAddress(USDC_ADDRESS) as Address;
@@ -157,8 +188,9 @@ export class CustodialSettlement implements SettlementProvider {
           await prisma.payout.update({
             where: { id: target.data.id },
             data: remaining > 0n
+              // Still owed: the finally-release puts it back to PENDING.
               ? { amount: remaining }
-              : { status: "CLAIMED", txHash: partialTxHash, netAmount: partialNet, feeAmount: partialFee, claimedAt: new Date() },
+              : { status: "CLAIMED", txHash: partialTxHash, netAmount: partialNet, feeAmount: partialFee, claimedAt: new Date(), ...CLEAR_LOCK },
           });
         } else {
           // stream share - advance claimedAmount
@@ -237,6 +269,7 @@ export class CustodialSettlement implements SettlementProvider {
             feeAmount: feeShare,
             netAmount: p.amount - feeShare,
             claimedAt,
+            ...CLEAR_LOCK,
           },
         });
         i++;
@@ -245,7 +278,7 @@ export class CustodialSettlement implements SettlementProvider {
         const feeShare = (fee * c.amount) / gross;
         await tx.streamShare.update({
           where: { id: c.share.id },
-          data: { claimedAmount: c.share.claimedAmount + c.amount },
+          data: { claimedAmount: c.share.claimedAmount + c.amount, ...CLEAR_LOCK },
         });
         await tx.streamClaim.create({
           data: {

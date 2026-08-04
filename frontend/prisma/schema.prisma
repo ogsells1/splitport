@@ -136,12 +136,14 @@ enum StreamStatus {
 // whole window (split by basis points at creation). `claimedAmount` tracks how
 // much they've already pulled. wallet is null while the invite is unclaimed.
 model StreamShare {
-  id            String  @id @default(cuid())
+  id            String    @id @default(cuid())
   streamId      String
   contributorId String?
   wallet        String? // lowercased; null until the invite is linked
-  amount        BigInt  // this contributor's total share over the full window
-  claimedAmount BigInt  @default(0)
+  amount        BigInt // this contributor's total share over the full window
+  claimedAmount BigInt    @default(0)
+  claimLockId   String? // set while a claim run owns this row (see lib/claimLock.ts)
+  claimLockAt   DateTime? // when the lock was taken; older than STALE_LOCK_MS is reclaimable
 
   stream      PayoutStream  @relation(fields: [streamId], references: [id])
   contributor Contributor?  @relation(fields: [contributorId], references: [id])
@@ -149,6 +151,7 @@ model StreamShare {
 
   @@index([wallet])
   @@index([contributorId])
+  @@index([claimLockId])
   @@map("stream_shares")
 }
 
@@ -295,6 +298,8 @@ model Payout {
   txHash         String?      @unique
   createdAt      DateTime     @default(now())
   claimedAt      DateTime?
+  claimLockId    String?      // set while a claim run owns this row (see lib/claimLock.ts)
+  claimLockAt    DateTime?    // when the lock was taken; older than STALE_LOCK_MS is reclaimable
 
   distribution Distribution @relation(fields: [distributionId], references: [id])
   project      Project      @relation(fields: [projectId], references: [id])
@@ -302,10 +307,12 @@ model Payout {
 
   @@index([wallet, status])
   @@index([contributorId])
+  @@index([claimLockId])
   @@map("payouts")
 }
 
 enum PayoutStatus {
   PENDING
+  PROCESSING // a claim run owns this row and its transfer is in flight
   CLAIMED
 }
