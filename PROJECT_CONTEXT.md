@@ -54,7 +54,7 @@ byn-split-pay/
 │   │   ├── replace_contributors.ts
 │   │   ├── deposit.ts / distribute.ts / check.ts / debug.ts
 │   │   └── lib/syncDb.ts        — POST /api/project после deploy/initialize (ownerPrivyId="cli-admin")
-│   ├── test/SplitVault.test.ts  — 19 тестов, все проходят
+│   ├── test/SplitVault.test.ts  — 51 тест, все проходят
 │   ├── hardhat.config.ts
 │   └── .env                     — PRIVATE_KEY, USDC_ADDRESS, API_URL
 └── frontend/

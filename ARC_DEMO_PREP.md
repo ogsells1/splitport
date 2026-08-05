@@ -40,7 +40,7 @@
 
 Подготовить 1-страничный документ `ARC_PITCH.md`:
 - Что мы показываем Arc: gas abstraction (executor платит газ в USDC, fee 18→6 знаков), embedded wallets (Privy), карта→USDC onramp (Stripe, testnet 1:1), 4 режима выплат (instant %, fixed, scheduled, streaming).
-- Честная архитектурная позиция: сегодня учёт распределений в БД, on-chain — финальный settlement при claim; SplitVault.sol (19 тестов) — задел под on-chain custody; roadmap по NONCUSTODIAL.md.
+- Честная архитектурная позиция: сегодня учёт распределений в БД, on-chain — финальный settlement при claim; SplitVault.sol (51 тест) — задел под on-chain custody; roadmap по NONCUSTODIAL.md.
 - Метрики, если есть (кол-во тестовых tx, время от инвайта до денег).
 - Ask: что хотим от Arc (mainnet-доступ, грант/экосистемная программа, интро к Circle onramp).
 

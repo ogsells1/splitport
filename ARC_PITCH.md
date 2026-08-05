@@ -28,7 +28,7 @@ trustless custody today — we're showing a working product with a credible on-c
 
 ## Metrics
 
-- `SplitVault.sol`: 19/19 tests green.
+- `SplitVault.sol`: 51/51 tests green.
 - End-to-end verified on Arc Testnet: login → funded treasury (Stripe card) →
   distribute by % → contributor claim → USDC settled on-chain, fee deducted.
 - Sample settlement tx (5.00 USDC claim): [0x1f74cee2…24cc26](https://testnet.arcscan.app/tx/0x1f74cee2bda1b546d6a5edb61cd5915e84e148f0b0b583facb1772049b24cc26)

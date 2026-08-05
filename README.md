@@ -19,7 +19,7 @@ Google login; gas is paid by the executor in USDC, so no crypto skills are requi
 
 - **Frontend:** Next.js (App Router), Tailwind, TypeScript — `frontend/`
 - **Auth & wallets:** Privy (embedded wallets, Google/email/wallet login)
-- **Chain:** Arc Testnet, USDC settlement; `SplitVault.sol` (Solidity, Hardhat, 19 tests) — `contracts/`
+- **Chain:** Arc Testnet, USDC settlement; `SplitVault.sol` (Solidity, Hardhat, 51 tests) — `contracts/`
 - **Onramp:** Stripe (card → USDC, testnet)
 - **DB:** Prisma / Postgres (distribution accounting)
 - **Circle:** USDC (settlement rail) + Developer-Controlled Wallets (executor signer) + User-Controlled Wallets (recipients) + Bridge Kit + Unified Balance Kit — see below
@@ -28,7 +28,8 @@ Google login; gas is paid by the executor in USDC, so no crypto skills are requi
 
 SplitPort settles every payout in **USDC on Arc Testnet**. The executor that
 signs those payouts can run on either of two interchangeable signers, selected
-by `CUSTODY_MODE` and switchable live at `/admin/settlement`:
+by `CUSTODY_MODE` and switchable live at `/admin/settlement` (see the note under
+Setup — the switch is disabled in production by default):
 
 | Mode | Signer | Where |
 |---|---|---|
@@ -61,6 +62,12 @@ identically when Circle Wallets sign the transfer.
    used for the executor wallet).
 5. Set `CUSTODY_MODE=circle`, or leave it as `custodial` and flip the signer
    live from `/admin/settlement` (paste `ADMIN_TOKEN`, click "Use Circle Wallet").
+
+> **The live switch is off in production by default.** `/api/admin/settlement-mode`
+> returns 404 unless `ADMIN_ENDPOINTS_ENABLED=true` is set, so a single static token
+> never guards a live money path by accident. It works as-is in local development.
+> To demo the switch on a deployed instance, set that variable; otherwise select the
+> signer with `CUSTODY_MODE` and redeploy.
 
 ### Beyond Arc: User-Controlled Wallets, Bridge Kit, Unified Balance Kit
 

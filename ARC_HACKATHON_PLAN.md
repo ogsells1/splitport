@@ -7,7 +7,7 @@
 **SplitPort** — платформа split-выплат для распределённых команд, расчёты в **USDC на Arc Testnet**.
 - Прод: https://splitport.vercel.app · Репо: https://github.com/ogsells1/splitport (монорепо: `frontend/` Next.js App Router + `contracts/` Hardhat/Solidity).
 - Флоу: пополнить общую казну (карта Stripe или on-chain USDC) → задать доли контрибьюторов → распределить (percentage / fixed / scheduled / streaming) → контрибьютор клеймит долю в кабинете → executor шлёт USDC on-chain, комиссия (газ в USDC) вычитается при claim.
-- Учёт распределений — в Postgres (Supabase), on-chain — финальный settlement при claim. `contracts/SplitVault.sol` (19 тестов) — задел под on-chain custody. См. `PROJECT_CONTEXT.md`, `NONCUSTODIAL.md`.
+- Учёт распределений — в Postgres (Supabase), on-chain — финальный settlement при claim. `contracts/SplitVault.sol` (51 тест) — задел под on-chain custody. См. `PROJECT_CONTEXT.md`, `NONCUSTODIAL.md`.
 
 **Текущий стек и где он в коде:**
 - Кошельки получателей: **Privy** (embedded). Клиент — `frontend/app/providers.tsx` + `usePrivy/useWallets` в 11 файлах `app/`,`components/`. Сервер-верификация — только `frontend/lib/auth.ts` (`requireUser`, `requireWallet` через `@privy-io/server-auth`).

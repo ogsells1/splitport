@@ -36,7 +36,7 @@ _(Подстрой тон под чат; ссылки оставить.)_
    показать транзакцию на testnet.arcscan.app.
 4. **Что показываем Arc (30 сек).** Gas abstraction (executor платит газ в USDC),
    embedded wallets (Privy), card→USDC onramp (Stripe), on-chain settlement,
-   `SplitVault.sol` (19 тестов) как задел под non-custodial custody.
+   `SplitVault.sol` (51 тест) как задел под non-custodial custody.
 5. **Ask.** Mainnet-доступ, грант/экосистемная программа, интро к Circle onramp.
 
 ## 3. Заготовки ответов на вопросы
